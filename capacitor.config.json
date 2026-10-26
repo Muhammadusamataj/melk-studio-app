@@ -1,0 +1,11 @@
+{
+  "appId": "com.bleled.com",
+  "appName": "MELK Studio",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "appReadyTimeout": 10000
+    }
+  }
+}

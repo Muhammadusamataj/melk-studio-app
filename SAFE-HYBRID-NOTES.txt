@@ -1,0 +1,9 @@
+MELK Studio safe hybrid (working BLE baseline)
+
+SOURCE: User-confirmed MELK-Studio-Bluetooth-working.zip
+BLE adapter (www/js/ble-native.js), connection/scan logic, UUIDs and native BLE plugin kept from working ZIP.
+Added: revised music audio frame logic, device info readout, native AudioLevelPlugin registration, RECORD_AUDIO permission.
+IMPORTANT: No new location services check or location permission was added.
+Android app/src/main/assets/public UI mirrored from www for direct Android Studio builds.
+Build using Android Studio from the android directory; run npx cap sync android if updating web files.
+Device tests required; a working connection cannot be guaranteed until installed on phone.
