@@ -1,7 +1,7 @@
 /* MELK Studio self-hosted OTA. No Bluetooth code is changed here. */
 (function(g) {
   'use strict';
-  const APP_VERSION = '1.1.7';
+  const APP_VERSION = '1.1.8';
   const DEFAULT_URL = 'https://muhammadusamataj.github.io/melk-studio-ota-/ota/melk-version.json';
   const KEY_URL = 'melk.ota.url', KEY_PIN = 'melk.admin', KEY_FAIL = 'melk.admin.fail';
   const store = {
