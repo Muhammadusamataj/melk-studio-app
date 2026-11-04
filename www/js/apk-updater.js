@@ -125,7 +125,14 @@
         if (m.minSdk && m.minSdk > info.sdk) { emit({ state: 'error', manifest: m, message: 'This update needs a newer version of Android than this phone has.' }); return; }
         emit({ state: 'available', manifest: m, message: '' });
       } catch (e) {
-        emit({ state: 'error', message: 'Could not check for an app update: ' + (e && e.message ? e.message : e) });
+        // A missing release manifest means no full APK release has been published yet.
+        // Do not claim the installed APK is the latest, and do not invent a download.
+        const detail = String(e && e.message ? e.message : e);
+        if (/\\b404\\b/.test(detail)) {
+          emit({ state: 'idle', message: 'No full-app update has been published yet. Web updates can still be checked above.' });
+          return;
+        }
+        emit({ state: 'error', message: 'Could not check for an app update: ' + detail });
       }
     }
 
