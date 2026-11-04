@@ -21,7 +21,7 @@ This source ZIP is prepared for OTA; plugin installation could not be completed 
 1. Update `APP_VERSION` in `www/js/ota.js` to a higher semantic version (e.g. `1.0.1`).
 2. From project root run:
    ```bash
-   python3 tools/make-ota.py 1.0.1 https://super-clafoutis-88fa64.netlify.app/ota/
+   python3 tools/make-ota.py 1.0.1 https://muhammadusamataj.github.io/melk-studio-ota-/ota/
    ```
 3. Upload `ota-out/melk-1.0.1.zip` **and** `ota-out/melk-version.json` to the `/ota/` path of the configured HTTPS host. Verify that the download URLs return public files.
 4. Open installed app online; it checks for updates after startup and asks for approval. Downloaded updates activate after app background/restart.

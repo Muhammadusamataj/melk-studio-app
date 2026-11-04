@@ -1,0 +1,13 @@
+PLAY STORE CHECKLIST
+
+[ ] Google Play Console developer account (one-time fee of USD 25). Needs a Google account and ID verification.
+[ ] Host docs/privacy-policy.md at a public link (GitHub Pages / Netlify). Paste it in the console.
+[ ] Icons: copy native/android/res/* into android/app/src/main/res/ (replaces the default icons).
+[ ] Permissions: replace the permission lines using native/android/manifest-permissions.xml.
+[ ] Keystore and signing: follow release-build.gradle.txt. Build the .aab.
+[ ] Upload the .aab to "Internal testing" first. Test on your phone with the real strip.
+[ ] Store listing: name, descriptions, icon (docs/play/playstore-icon-512.png), screenshots (phone, min 2).
+[ ] App content: privacy policy URL, data safety (see docs/play/store-listing.md), permission declarations, target audience, ads = No.
+[ ] Send for review, then production. First review can take several days.
+
+Before public launch, check that the name "MELK Studio" is not already used for a similar app on Play.

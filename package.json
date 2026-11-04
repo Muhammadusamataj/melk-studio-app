@@ -1,4 +1,16 @@
 {
+  "name": "melk-studio",
+  "version": "1.1.7",
+  "private": true,
+  "scripts": {
+    "sync:android": "cap sync android",
+    "build:preview": "python3 tools/build-standalone.py",
+    "build:android": "npm run sync:android && cd android && bash gradlew assembleDebug",
+    "test": "node --test \"tests/*.cjs\"",
+    "test:e2e": "python3 tests/e2e/lifecycle.py && python3 tests/e2e/features.py && python3 tests/e2e/upgrade.py && python3 tests/e2e/apk-updater.py && python3 tests/e2e/ui-cleanup.py && python3 tests/e2e/effects-browser.py && python3 tests/e2e/ui-duplication.py --assert && python3 tests/e2e/ui-audit.py",
+    "compare:release": "python3 tools/compare-release.py",
+    "test:tools": "python3 -m unittest discover -s tests/tools"
+  },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",
     "@capacitor/android": "^8.5.3",

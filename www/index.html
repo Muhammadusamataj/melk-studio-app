@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120d1b">
+<title>MELK Studio</title>
+<link rel="manifest" href="manifest.webmanifest" data-pwa>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" data-pwa>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="top">
+    <button id="btnConn" class="chip conn" type="button" aria-label="Connection status. Tap to connect or disconnect">
+      <span class="dot" id="connDot"></span><span id="connLabel">Connect strip</span>
+    </button>
+    <div class="topActs">
+      <button id="btnCar" class="chip" type="button" aria-label="Open car mode">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+        <span>Car</span>
+      </button>
+      <button id="btnPower" class="power" type="button" aria-pressed="true" aria-label="Power">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <div class="orb" id="orb"></div>
+    <div class="readout"><strong id="roHex">#FFB347</strong><span id="roSub">Brightness 80%</span></div>
+    <div class="banner" id="connBanner" role="status" hidden>
+      <span id="connBannerText">Strip not connected</span>
+      <button id="connBannerBtn" class="btn main sm" type="button">Connect strip</button>
+    </div>
+    <details class="directPower">
+      <summary>Direct power</summary>
+      <p class="hint">Sends ON or OFF straight to the strip. Use it if the strip and the app disagree.</p>
+      <div class="seg" role="group" aria-label="Direct strip power controls">
+        <button type="button" id="forcePowerOn">Light ON</button>
+        <button type="button" id="forcePowerOff">Light OFF</button>
+      </div>
+    </details>
+  </section>
+
+  <nav class="scenes" id="scenes" aria-label="Scenes"></nav>
+
+  <main class="stage">
+
+    <!-- COLOUR -->
+    <section class="panel" id="tab-color" role="tabpanel" aria-labelledby="t-color">
+      <div class="sect">
+        <div class="wheelWrap"><canvas id="wheel" width="300" height="300" aria-label="Colour wheel"></canvas><div class="thumb" id="thumb"></div></div>
+        <label class="row"><span>Brightness</span><output id="brOut">80%</output>
+          <input id="br" type="range" min="0" max="100" value="80"></label>
+        <label class="row"><span>White</span><output id="wOut">Neutral</output>
+          <input id="warm" type="range" min="0" max="100" value="50" class="whiteRange"></label>
+        <details class="fine"><summary>Fine tune</summary>
+          <label class="row"><span>Red</span><output id="rOut">0</output><input id="rr" type="range" min="0" max="255"></label>
+          <label class="row"><span>Green</span><output id="gOut">0</output><input id="gg" type="range" min="0" max="255"></label>
+          <label class="row"><span>Blue</span><output id="bOut">0</output><input id="bb" type="range" min="0" max="255"></label>
+          <label class="row"><span>Hex</span><input id="hexIn" class="text" maxlength="7" value="#FFB347" autocomplete="off" spellcheck="false"></label>
+        </details>
+      </div>
+      <div class="sect">
+        <div class="head"><h2>My colours</h2><button class="link" id="palEdit" type="button">Edit</button></div>
+        <div class="palette" id="palette"></div>
+      </div>
+    </section>
+
+    <!-- EFFECTS -->
+    <section class="panel" id="tab-fx" role="tabpanel" aria-labelledby="t-fx" hidden>
+      <div class="seg full" role="group" aria-label="Effect type">
+        <button type="button" id="segBuilt" aria-pressed="true">Built-in</button>
+        <button type="button" id="segMine" aria-pressed="false">My effects</button>
+      </div>
+
+      <div id="fxBuilt">
+        <div class="group">
+          <button class="navrow lab" type="button" data-open="lab" id="fxRainbow"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-8 6-8 9 0s6 8 9 0"/></svg></span><span class="nt"><b>Hardware Rainbow <span class="badge" id="fxRbStatus" data-s="UNVERIFIED">UNVERIFIED</span></b><small id="fxRbText">Not tested yet</small></span><span class="chev" aria-hidden="true">›</span></button>
+        </div>
+
+        <div class="sect" id="fxBrowser">
+          <div class="head"><h2>Strip effects</h2><span class="hint inl" id="fxCount" aria-live="polite">0 effects</span></div>
+          <div class="fxTools">
+            <input id="fxSearch" class="text" type="search" placeholder="Search effects" aria-label="Search effects by name or number" autocomplete="off" spellcheck="false" enterkeyhint="search">
+            <label class="chipToggle"><input type="checkbox" id="persistentOnly"><span>✓ Verified only</span></label>
+          </div>
+          <div class="fxCats" id="fxCats" role="tablist" aria-label="Effect groups"></div>
+          <p class="hint" id="fxCatNote"></p>
+          <div class="fxList" id="fxList" role="listbox" aria-label="Effects"></div>
+          <div class="fxSel" id="fxSel">
+            <div class="fxSelHead"><div class="fxSelTxt"><b id="fxSelName">Choose an effect</b><small id="fxSelMeta"></small></div><span class="badge" id="fxSelBadge" data-s="UNVERIFIED">NOT TESTED</span></div>
+            <p class="hint" id="fxSelStatus"></p>
+            <p class="hint small" id="fxSelSent"></p>
+            <div class="btnRow">
+              <button class="btn main" id="fxRun" type="button">Run on strip</button>
+              <button class="btn ghost" id="fxFav" type="button" aria-pressed="false">☆ Favourite</button>
+              <button class="btn ghost" id="fxRename" type="button">Rename</button>
+            </div>
+            <label class="row" id="fxSpeedRow"><span>Effect speed</span><output id="spOut">50%</output><input id="sp" type="range" min="0" max="100" value="50"></label>
+          </div>
+        </div>
+      </div>
+
+      <div id="fxMine" hidden>
+        <div class="sect flow">
+          <div class="head"><h2>Colour flow</h2><button class="btn main sm" id="flowBtn" type="button">Start</button></div>
+          <div class="strip flowStrip"></div>
+          <label class="row"><span>One full cycle</span><output id="flowOut">1 min</output><input id="flowSec" type="range" min="10" max="600" step="10" value="60"></label>
+        </div>
+        <div class="sect">
+          <div class="head"><h2>Your effects</h2><button class="link" id="seqNew" type="button">New effect</button></div>
+          <p class="hint">Phone effects stop when the app closes. To keep a pattern running on its own, edit the effect and choose a matching hardware mode.</p>
+          <div class="list" id="seqList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MUSIC -->
+    <section class="panel" id="tab-music" role="tabpanel" aria-labelledby="t-music" hidden>
+      <div class="sect">
+        <button class="big" id="musicBtn" type="button">Start listening</button>
+        <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+        <p class="hint center">Uses the microphone. Only loudness is measured and nothing is stored. Works while the app is open.</p>
+      </div>
+      <div class="sect">
+        <div class="head"><h2>Style</h2></div>
+        <div class="seg full" role="group" aria-label="Music style">
+          <button type="button" data-ms="pulse" aria-pressed="true">Pulse colour</button>
+          <button type="button" data-ms="spectrum" aria-pressed="false">Shift hue</button>
+          <button type="button" data-ms="dj" aria-pressed="false">DJ patterns</button>
+        </div>
+        <label class="row"><span>Sensitivity</span><output id="senOut">60%</output><input id="sen" type="range" min="5" max="100" value="60"></label>
+        <label class="row"><span>DJ minimum pattern time</span><output id="djIntervalOut">7 s</output><input id="djInterval" type="range" min="4" max="20" value="7"></label>
+        <p id="djStatus" class="hint">DJ patterns switch the strip’s built-in mode on strong beats. Favourite modes in Effects to build your own bank.</p>
+      </div>
+      <div class="sect">
+        <details class="fine"><summary>Beat detection</summary>
+          <p class="hint">Weak sound is filtered out and changes are rate limited.</p>
+          <label class="row"><span>Beat strength threshold</span><output id="beatGateOut">55%</output><input id="beatGate" type="range" min="10" max="100" value="55"></label>
+          <label class="row"><span>Minimum time between beats</span><output id="beatCooldownOut">360 ms</output><input id="beatCooldown" type="range" min="220" max="850" step="10" value="360"></label>
+          <p id="beatLamp" class="hint" aria-live="off">Beat count: 0</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="panel" id="tab-settings" role="tabpanel" aria-labelledby="t-settings" hidden>
+      <h1 class="pageTitle">Settings</h1>
+
+      <div class="group" role="list">
+        <button class="navrow" type="button" data-open="connection" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg></span><span class="nt"><b>Connection</b><small id="navConnSub">Not connected</small></span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="navrow" type="button" data-open="vehicle" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg></span><span class="nt"><b>Vehicle &amp; Drive</b><small id="navVehicleSub">My car</small></span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="navrow" type="button" data-open="scenes" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nt"><b>Scenes</b><small>Save, favourite, share and import</small></span><span class="chev" aria-hidden="true">›</span></button>
+      </div>
+
+      <div class="group" role="list">
+        <button class="navrow" type="button" data-open="automation" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="nt"><b>Automation &amp; timers</b><small>Auto scenes, routines, sleep timer, night dimming</small></span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="navrow" type="button" data-open="backup" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span><span class="nt"><b>Backup &amp; restore</b><small>Save or load your settings</small></span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="navrow" type="button" data-open="updates" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></span><span class="nt"><b>Software updates</b><small id="navUpdateSub">Web and app updates</small></span><span class="chev" aria-hidden="true">›</span></button>
+      </div>
+
+      <div class="group" role="list">
+        <button class="navrow lab" type="button" data-open="lab" role="listitem"><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 15h9"/></svg></span><span class="nt"><b>Experimental Lab <span class="badge" data-s="UNVERIFIED">EXPERIMENTAL</span></b><small>Guided hardware tests. Park the car first.</small></span><span class="chev" aria-hidden="true">›</span></button>
+        <button class="navrow dev" type="button" data-open="dev" id="rowDev" role="listitem" hidden><span class="ni"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/></svg></span><span class="nt"><b>Developer options</b><small>Raw protocol tools and diagnostics</small></span><span class="chev" aria-hidden="true">›</span></button>
+      </div>
+
+      <button class="aboutCard" type="button" id="aboutVersion" aria-label="About MELK Studio">
+        <b>MELK Studio</b>
+        <span id="aboutText">Version 1.1.7</span>
+        <small id="aboutHint">Independent app. Not affiliated with any LED strip maker.</small>
+      </button>
+    </section>
+  </main>
+
+  <nav class="tabs" role="tablist" aria-label="Main sections">
+    <button role="tab" id="t-color" aria-selected="true" data-tab="color" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.2"/></svg><span>Colour</span></button>
+    <button role="tab" id="t-fx" aria-selected="false" data-tab="fx" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-8 6-8 9 0s6 8 9 0"/></svg><span>Effects</span></button>
+    <button role="tab" id="t-music" aria-selected="false" data-tab="music" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10v4M9 6v12M13 9v6M17 4v16M21 11v2"/></svg><span>Music</span></button>
+    <button role="tab" id="t-settings" aria-selected="false" data-tab="settings" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Settings</span></button>
+  </nav>
+</div>
+
+<!-- ============ PAGES (opened from Settings) ============ -->
+
+<section class="page" id="page-connection" role="dialog" aria-modal="true" aria-labelledby="pt-connection" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-connection">Connection</h1></header>
+  <div class="pageBody">
+    <div class="sect connStatus" id="connPageCard" data-s="idle">
+      <div class="connRow"><span class="dot" id="connPageDot"></span><div class="connTxt"><b id="connPageLabel">Not connected</b><small id="connPageSub">Power the strip on, then connect.</small></div></div>
+      <button class="btn main block" id="connPageBtn" type="button">Connect strip</button>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Controller</h2></div>
+      <div class="kvlist" id="ctrlInfo" aria-live="polite"></div>
+      <details class="fine"><summary>Technical details</summary><div class="kvlist" id="ctrlTech"></div></details>
+    </div>
+    <details class="sect fine tipsBox"><summary>Can’t connect?</summary>
+      <ul class="tips">
+        <li>Power the strip on and bring the phone close.</li>
+        <li>Close other apps that hold the strip (Magic Lantern, LED LAMP). It talks to one app at a time.</li>
+        <li>Turn Bluetooth on and allow Nearby devices for MELK Studio in Android settings.</li>
+      </ul>
+    </details>
+  </div>
+</section>
+
+<section class="page" id="page-vehicle" role="dialog" aria-modal="true" aria-labelledby="pt-vehicle" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-vehicle">Vehicle &amp; Drive</h1></header>
+  <div class="pageBody">
+    <div class="sect">
+      <div class="head"><h2>Vehicle profile</h2></div>
+      <label class="field"><span>Active vehicle</span><select class="text" id="vehSel"></select></label>
+      <label class="field"><span>Name</span><input class="text" id="vehName" maxlength="24" autocomplete="off"></label>
+      <label class="row"><span>Driving brightness limit</span><output id="vehCapOut">40%</output><input id="vehCap" type="range" min="5" max="100" value="40"></label>
+      <label class="field"><span>When the strip connects</span><select class="text" id="vehStartup"></select></label>
+      <div class="btnRow"><button class="btn ghost" type="button" id="vehNew">Add vehicle</button><button class="btn ghost danger" type="button" id="vehDel">Delete this vehicle</button></div>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Driving and Parked</h2></div>
+      <p class="hint">You choose the mode in Car mode; driving is not detected. Driving shows only calm scenes, caps brightness and blocks flashing, fast and hardware effects.</p>
+      <button class="link" type="button" id="vehOpenCar">Open Car mode ›</button>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-scenes" role="dialog" aria-modal="true" aria-labelledby="pt-scenes" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-scenes">Scenes</h1></header>
+  <div class="pageBody">
+    <div class="sect">
+      <div class="btnRow"><button class="btn main" id="sceneSave" type="button">Save current as scene</button><button class="btn ghost" id="sceneImport" type="button">Import scene</button></div>
+      <div id="recentWrap" hidden><h3 class="sub">Recent</h3><div class="chips" id="recentList"></div></div>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>All scenes</h2><button class="link" id="sceneReset" type="button">Reset to defaults</button></div>
+      <p class="hint">★ marks favourites: they come first in the scene row and show in Car mode.</p>
+      <div class="list" id="sceneList"></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-automation" role="dialog" aria-modal="true" aria-labelledby="pt-automation" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-automation">Automation &amp; timers</h1></header>
+  <div class="pageBody">
+    <div class="sect">
+      <div class="head"><h2>Auto scenes</h2></div>
+      <p class="hint">Auto (in the scene row) picks scenes by time of day, or rotates built-in patterns. Rotating needs the app open and connected.</p>
+      <label class="field"><span>Auto behaviour</span><select class="text" id="autoStyle"><option value="time">Time of day (original)</option><option value="modes">Shuffle hardware patterns</option></select></label>
+      <label class="row"><span>Pattern interval</span><output id="autoIntervalOut">45 s</output><input id="autoInterval" type="range" min="15" max="180" step="5" value="45"></label>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Daily routines</h2></div>
+      <p class="hint">Uses your phone’s time. Runs only while the app is open and the strip is connected.</p>
+      <label class="check"><input type="checkbox" id="routineEnabled"><span>Enable daily routines</span></label>
+      <label class="field"><span>At local time</span><input class="text" id="routineTime" type="time" value="20:00"></label>
+      <label class="field"><span>Action</span><select id="routineScene" class="text"></select></label>
+      <button type="button" class="btn ghost block" id="routineAdd">Add routine</button>
+      <div id="routineList" class="routine-list"></div>
+      <p id="routineStatus" class="hint" aria-live="polite"></p>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Sleep timer</h2><span class="hint inl" id="sleepInfo">Off</span></div>
+      <div class="seg full" id="sleepSeg" role="group" aria-label="Sleep timer">
+        <button type="button" data-min="0" aria-pressed="true">Off</button>
+        <button type="button" data-min="15" aria-pressed="false">15 min</button>
+        <button type="button" data-min="30" aria-pressed="false">30 min</button>
+        <button type="button" data-min="60" aria-pressed="false">1 h</button>
+        <button type="button" data-min="120" aria-pressed="false">2 h</button>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Night dimming</h2></div>
+      <label class="check"><input type="checkbox" id="sunDim"><span>Dim automatically after sunset</span></label>
+      <label class="row"><span>Night brightness limit</span><output id="sunCapOut">25%</output><input id="sunCap" type="range" min="5" max="60" value="25"></label>
+      <p class="hint" id="sunInfo">Uses your location once to work out sunset. It stays on your phone.</p>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Smooth changes</h2></div>
+      <p class="hint">Fade between scenes and when switching on or off.</p>
+      <div class="seg full" id="fadeSeg" role="group" aria-label="Fade time">
+        <button type="button" data-fade="0" aria-pressed="false">Off</button>
+        <button type="button" data-fade="1000" aria-pressed="false">1 s</button>
+        <button type="button" data-fade="2000" aria-pressed="false">2 s</button>
+        <button type="button" data-fade="4000" aria-pressed="false">4 s</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-backup" role="dialog" aria-modal="true" aria-labelledby="pt-backup" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-backup">Backup &amp; restore</h1></header>
+  <div class="pageBody">
+    <div class="sect">
+      <div class="head"><h2>File</h2></div>
+      <div class="btnRow"><button class="btn main" id="expFile" type="button">Save to file</button><button class="btn ghost" id="impFile" type="button">Load file</button></div>
+      <input type="file" id="impInput" accept="application/json,.json" hidden>
+    </div>
+    <div class="sect">
+      <div class="head"><h2>Text</h2></div>
+      <p class="hint">Copy your settings as text, or paste and import them. Imports are checked; unknown items are ignored.</p>
+      <div class="btnRow"><button class="btn ghost" id="expBtn" type="button">Show as text</button><button class="btn ghost" id="impBtn" type="button">Import text</button></div>
+      <textarea id="backup" class="text area" rows="6" aria-label="Settings text" placeholder="Settings text" spellcheck="false"></textarea>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-updates" role="dialog" aria-modal="true" aria-labelledby="pt-updates" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-updates">Software updates</h1></header>
+  <div class="pageBody">
+    <div class="sect" id="webUpdateCard" aria-live="polite">
+      <div class="head"><h2>Web update</h2><span class="badge" data-s="VERIFIED_SUPPORTED">NO INSTALL</span></div>
+      <p class="hint">Screens, settings and fixes. Quick, and Bluetooth stays connected.</p>
+      <p class="hint" id="otaStatus">Ready to check for updates.</p>
+      <progress id="otaProgress" max="100" value="0" hidden></progress>
+      <div class="btnRow"><button class="btn main" id="otaCheck" type="button">Check for updates</button><button class="btn ghost" id="otaInstall" type="button" hidden>Download &amp; install</button></div>
+      <details class="fine"><summary>Version and server</summary>
+        <div class="kvlist">
+          <div class="kv"><span>App version</span><strong id="otaVersion">v1.1.7</strong></div>
+          <div class="kv"><span>Updater</span><strong id="otaCapability">Checking…</strong></div>
+          <div class="kv"><span>Update server</span><strong id="otaHost">…</strong></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="sect" id="apkCard">
+      <div class="head"><h2>App update</h2><span class="badge" id="apkBadge" data-s="UNVERIFIED">FULL APP</span></div>
+      <p class="hint">A full new copy of the app, installed through Android. You confirm on its screen.</p>
+      <div class="kvlist">
+        <div class="kv"><span>Installed</span><strong id="apkInstalled">Checking…</strong></div>
+        <div class="kv" id="apkAvailRow" hidden><span>Available</span><strong id="apkAvailable">Not checked</strong></div>
+      </div>
+      <p class="hint" id="apkStatus" role="status" aria-live="polite">Check whether a newer version of the app is available.</p>
+      <div class="progressRow" id="apkProgressRow" hidden>
+        <progress id="apkProgress" max="100" value="0" aria-label="Download progress"></progress>
+        <span id="apkPercent">0%</span>
+      </div>
+      <div class="notice warn" id="apkPermission" hidden>
+        <b>Allow installing updates</b>
+        <ol class="steps2">
+          <li>Tap <b>Open Android settings</b>.</li>
+          <li>Turn on <b>Allow from this source</b> for MELK Studio.</li>
+          <li>Come back here. The update continues.</li>
+        </ol>
+        <button class="btn main block" id="apkPermOpen" type="button">Open Android settings</button>
+      </div>
+      <div class="btnRow">
+        <button class="btn main" id="apkCheck" type="button">Check for app update</button>
+        <button class="btn main" id="apkDownload" type="button" hidden>Download update</button>
+        <button class="btn ghost" id="apkCancel" type="button" hidden>Cancel download</button>
+        <button class="btn main" id="apkInstall" type="button" hidden>Install update</button>
+      </div>
+      <details class="fine"><summary>Package and signing</summary>
+        <div class="kvlist">
+          <div class="kv"><span>Package</span><strong id="apkPackage">…</strong></div>
+          <div class="kv"><span>Build type</span><strong id="apkBuildType">…</strong></div>
+          <div class="kv"><span>Signing key</span><strong id="apkSigner">…</strong></div>
+          <div class="kv"><span>Android</span><strong id="apkAndroid">…</strong></div>
+        </div>
+        <p class="hint small">An update installs only with the same package name, a higher build number and the same signing key.</p>
+        <button class="link" id="apkCleanup" type="button" hidden>Delete the downloaded update file</button>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXPERIMENTAL LAB ============ -->
+<section class="page lab" id="page-lab" role="dialog" aria-modal="true" aria-labelledby="pt-lab" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-lab">Experimental Lab</h1></header>
+  <div class="pageBody">
+    <div class="notice warn">
+      <b>Hardware tests</b>
+      <p>Park the car and keep the app open. These tests send known Magic Lantern effect numbers to the strip. Nothing changes your scenes unless you press Add.</p>
+      <label class="check"><input type="checkbox" id="labConfirm"><span>I am parked and the strip is connected.</span></label>
+    </div>
+
+    <div class="sect" id="hwRainbow">
+      <div class="head"><h2>Hardware Rainbow test</h2><span class="badge" id="hwRbStatus" data-s="UNVERIFIED">UNVERIFIED</span></div>
+      <div class="progressBar" aria-hidden="true"><i id="hwRbBar"></i></div>
+      <p class="hint small" id="hwRbCount">0 of 4 candidates tested</p>
+      <p class="hint" id="hwRbHint">Run a candidate, watch the strip, close the app, then record what you saw.</p>
+      <details class="fine"><summary>How to test</summary>
+        <ol class="steps2">
+          <li><b>Run</b> a candidate and watch the strip.</li>
+          <li>Does it <b>move along</b> the strip like Magic Lantern’s rainbow? Record Yes or No.</li>
+          <li>Swipe MELK Studio away and wait two minutes. Is it <b>still moving</b>? Reopen and record it.</li>
+          <li>Power the strip off and on. Does it <b>come back</b>? Record it.</li>
+        </ol>
+        <p class="hint">The phone Rainbow under My effects always freezes when the app closes. That is expected and makes a good control.</p>
+      </details>
+      <div class="rbList" id="hwRbList"></div>
+      <button class="btn ghost block" type="button" id="hwRbStatic">Back to a static colour</button>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Effect testers</h2></div>
+      <h3 class="sub">Mode number (0 to 212)</h3>
+      <div class="inline">
+        <input id="rawMode" class="text" type="number" min="0" max="255" value="128" inputmode="numeric" aria-label="Mode number">
+        <button class="btn main" id="rawGo" type="button">Send mode</button>
+        <button class="btn ghost" id="rawNext" type="button">Next</button>
+      </div>
+      <h3 class="sub">Strip scene (1 to 28)</h3>
+      <div class="inline">
+        <select id="nativeSel" class="text" aria-label="Native scene"></select>
+        <button class="btn main" id="nativeGo" type="button">Send scene</button>
+      </div>
+      <h3 class="sub">Effect explorer</h3>
+      <label class="field"><span>Reference effect</span><select class="text" id="nativeEffectSelect"></select></label>
+      <div class="btnRow"><button type="button" class="btn ghost" id="nativeEffectTest">Test effect</button><button type="button" class="btn ghost" id="nativeEffectVerified">Mark as verified</button></div>
+      <p class="hint" id="nativeEffectStatus">No effect tested. Needs the parking confirmation above.</p>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Keep effects on the strip</h2></div>
+      <label class="check"><input type="checkbox" id="preserveHardware"><span>On reconnect, leave the effect the strip restored by itself</span></label>
+      <h3 class="sub">Preset mapper</h3>
+      <p class="hint">Map a scene to a hardware mode you verified. The mode replaces the scene’s animation.</p>
+      <label class="field"><span>Scene</span><select class="text" id="persistentScene"></select></label>
+      <label class="field"><span>Verified hardware mode</span><select class="text" id="persistentMode"></select></label>
+      <div class="btnRow"><button class="btn main" type="button" id="persistentLink">Save mapping</button><button class="btn ghost" type="button" id="persistentRestore">Restore original</button><button class="btn ghost" type="button" id="persistentPlay">Play scene</button></div>
+      <p class="hint" id="persistentMapStatus" aria-live="polite">No changes made.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEVELOPER OPTIONS (hidden until unlocked) ============ -->
+<section class="page dev" id="page-dev" role="dialog" aria-modal="true" aria-labelledby="pt-dev" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-dev">Developer options</h1></header>
+  <div class="pageBody">
+    <div class="notice bad">
+      <b>For developers</b>
+      <p>Raw protocol tools. Wrong commands can switch the strip on or off or leave the app's power indicator out of step with the real strip. Use only while parked.</p>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Protocol Lab</h2></div>
+      <label class="check"><input type="checkbox" id="labConfirm2"><span>I am parked and want to send raw test commands.</span></label>
+      <div class="btnGrid">
+        <button type="button" class="btn ghost" id="labElkOn">ELK MELK: ON</button>
+        <button type="button" class="btn ghost" id="labElkOff">ELK MELK: OFF</button>
+        <button type="button" class="btn ghost" id="labOldOn">Current: ON</button>
+        <button type="button" class="btn ghost" id="labOldOff">Current: OFF</button>
+      </div>
+      <label class="field"><span>ELK native effect (128 to 155)</span><select class="text" id="labModeSelect"></select></label>
+      <button type="button" class="btn ghost block" id="labElkMode">Send ELK effect packet</button>
+      <label class="field"><span>Magic Lantern scene ID (0 to 255)</span><input class="text" type="number" id="magicSceneId" min="0" max="255" step="1" value="1"></label>
+      <button type="button" class="btn ghost block" id="magicSceneSend">Send raw scene packet</button>
+      <pre class="log" id="labOutput" aria-live="polite">No diagnostic command sent yet.</pre>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Power command profile</h2></div>
+      <p class="hint">The default commands are the ones that work. Choose the ELK alternative only after testing both ON and OFF in Protocol Lab. This changes power packets only.</p>
+      <label class="field"><span>Power format</span><select class="text" id="powerProfile"><option value="current">Existing MELK (default)</option><option value="elk">ELK alternative (tested only)</option></select></label>
+      <p class="hint" id="powerProfileStatus">Current protocol selected.</p>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Connection tools</h2></div>
+      <label class="check"><input type="checkbox" id="showAll"><span>Show every Bluetooth device when connecting</span></label>
+      <button class="btn ghost block" id="demoBtn" type="button">Use demo strip</button>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Bluetooth device info</h2></div>
+      <p class="hint">Reads the connected controller's services. It sends no commands. The device address is masked.</p>
+      <button class="btn ghost block" id="deviceDiagBtn" type="button">Read device info</button>
+      <pre class="log" id="deviceDiagOut"></pre>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Packets sent</h2></div>
+      <pre class="log" id="log" aria-live="off">Nothing sent yet.</pre>
+    </div>
+
+    <div class="sect">
+      <div class="head"><h2>Update server</h2></div>
+      <p class="hint">Change the address the app checks for updates. Protected by an admin PIN.</p>
+      <button class="btn ghost block" id="otaAdmin" type="button">Admin login</button>
+    </div>
+
+    <button class="btn ghost block" id="devHide" type="button">Hide developer options</button>
+  </div>
+</section>
+
+<!-- ============ CAR MODE ============ -->
+<div class="car" id="car" role="dialog" aria-modal="true" aria-label="Car mode" hidden>
+  <div class="carTop">
+    <div class="seg full carSeg" role="group" aria-label="Car mode">
+      <button type="button" id="carDriving" aria-pressed="false">Driving</button>
+      <button type="button" id="carParked" aria-pressed="true">Parked</button>
+    </div>
+    <p class="carHint" id="carHint">Set the lights before you drive. Keep them dim at night.</p>
+    <p class="carHint" id="carFavCount">Mark scenes as favourites in Settings, Scenes to show them here.</p>
+  </div>
+  <div class="carGrid" id="carGrid"></div>
+  <div class="carBr"><button type="button" id="carDown" aria-label="Dimmer">−</button><output id="carBr">80%</output><button type="button" id="carUp" aria-label="Brighter">+</button></div>
+  <div class="carRow"><button type="button" id="carOff">Off</button><button type="button" id="carExit">Exit car mode</button></div>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/protocol.js"></script>
+<script src="js/ble.js"></script>
+<script src="js/sync-policy.js"></script>
+<script src="js/ble-native.js"></script>
+<script src="js/audio-native.js"></script>
+<script src="js/scene-dna.js"></script>
+<script src="js/mode-catalog.js"></script>
+<script src="js/ota.js"></script>
+<script src="js/apk-updater.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pwa.js" data-pwa></script>
+</body>
+</html>

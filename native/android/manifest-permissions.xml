@@ -1,0 +1,18 @@
+<!-- Replace the Bluetooth/location/audio <uses-permission> lines in android/app/src/main/AndroidManifest.xml with these. -->
+
+<!-- BLE scanning on Android 12+ does not need location -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!-- Older Android (11 and below) needs fine location to scan for BLE devices -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+
+<!-- Used for sunset dimming only -->
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+<!-- Music sync from the phone's own audio output -->
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+<!-- Only needed if the Bluetooth hardware is required -->
+<uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />

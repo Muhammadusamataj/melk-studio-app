@@ -1,0 +1,39 @@
+Release setup for android/app/build.gradle (inside the android { } block)
+
+1) Create the upload key ONCE, in the android/ folder. Keep the file and passwords safe. Never commit them.
+   keytool -genkey -v -keystore melk-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias melk
+
+2) Create android/keystore.properties (do not commit):
+   storeFile=melk-release.jks
+   storePassword=YOUR_STORE_PASSWORD
+   keyAlias=melk
+   keyPassword=YOUR_KEY_PASSWORD
+
+3) In android/app/build.gradle add (above buildTypes):
+
+   def keystoreProps = new Properties()
+   def keystoreFile = rootProject.file("keystore.properties")
+   if (keystoreFile.exists()) keystoreProps.load(new FileInputStream(keystoreFile))
+
+   signingConfigs {
+       release {
+           if (keystoreFile.exists()) {
+               storeFile rootProject.file(keystoreProps['storeFile'])
+               storePassword keystoreProps['storePassword']
+               keyAlias keystoreProps['keyAlias']
+               keyPassword keystoreProps['keyPassword']
+           }
+       }
+   }
+
+4) In defaultConfig set (increase versionCode by 1 for every upload):
+   versionCode 1
+   versionName "1.0.0"
+
+5) In buildTypes { release { ... } } add:
+   signingConfig signingConfigs.release
+
+6) Build the bundle Play wants (.aab):
+   cd android
+   ./gradlew bundleRelease
+   Output: app/build/outputs/bundle/release/app-release.aab

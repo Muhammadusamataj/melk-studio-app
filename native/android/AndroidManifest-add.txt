@@ -1,0 +1,5 @@
+Add these two lines inside <manifest> in android/app/src/main/AndroidManifest.xml
+(next to the existing BLUETOOTH_* permissions):
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

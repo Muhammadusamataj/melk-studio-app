@@ -1,7 +1,7 @@
 MELK Studio OTA manifest fetch fix
 
 Changed only www/js/ota.js and the synced Android public/js/ota.js.
-Native Android: uses CapacitorHttp.get to request the Netlify JSON manifest, avoiding WebView CORS restrictions. Browser fallback: fetch() requires valid CORS response headers.
+Native Android: uses CapacitorHttp.get to request the GitHub Pages JSON manifest, avoiding WebView CORS restrictions. Browser fallback: fetch() requires valid CORS response headers.
 Native OTA bundle download continues through CapacitorUpdater.download and has not been validated on device.
 
 Build: npm install && npx cap sync android; then build and install APK.

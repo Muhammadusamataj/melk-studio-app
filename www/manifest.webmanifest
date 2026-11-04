@@ -1,0 +1,16 @@
+{
+  "name": "MELK Studio",
+  "short_name": "MELK Studio",
+  "description": "Customisable controller for MELK Bluetooth LED strips",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1b1426",
+  "theme_color": "#1b1426",
+  "shortcuts": [
+    { "name": "Night drive", "url": "./index.html#scene=c-night" },
+    { "name": "Sleep", "url": "./index.html#scene=sleep" },
+    { "name": "Relax", "url": "./index.html#scene=relax" },
+    { "name": "Lights off", "url": "./index.html#scene=off" }
+  ],
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

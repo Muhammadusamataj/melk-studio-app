@@ -1,0 +1,11 @@
+{
+  "appId": "com.melk.studio",
+  "appName": "MELK Studio",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "statsUrl": ""
+    }
+  }
+}

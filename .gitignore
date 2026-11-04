@@ -1,0 +1,19 @@
+node_modules/
+.gradle/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/capacitor-cordova-android-plugins/
+*.jks
+*.keystore
+ota-out/
+
+# signing material: never commit
+keystore.properties
+**/keystore.properties
+*.p12
+*.pfx
+
+# python caches
+__pycache__/
+*.pyc

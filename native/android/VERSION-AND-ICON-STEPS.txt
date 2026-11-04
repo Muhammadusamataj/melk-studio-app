@@ -1,0 +1,10 @@
+In android/app/build.gradle, inside defaultConfig:
+    versionCode 2
+    versionName "1.0.1"
+
+Icons: copy everything from native/android/res/ into android/app/src/main/res/
+(it overwrites the default mipmap icons). Copy AudioLevelPlugin.java into
+android/app/src/main/java/studio/melk/app/.
+
+Then in the android folder: Build > Clean Project, Build > Rebuild Project.
+Uninstall the old MELK Studio from the phone before installing the new APK.

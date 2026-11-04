@@ -1,55 +1,67 @@
 # MELK Studio
 
 A customisable controller for MELK Bluetooth LED strips (the ones driven by the Magic Lantern app).
-No build step. Plain HTML, CSS and JavaScript.
+Plain HTML, CSS and JavaScript, wrapped with Capacitor for Android. Version **1.1.7** (review candidate).
 
-## What you can customise
-* **My colours**: save, reorder and delete your own palette.
-* **My effects**: build looping colour sequences (colour, fade time, hold time, overall speed). Five presets included.
-* **Strip modes**: rename, star and hide the strip's built-in modes. Names are saved.
-* **Music**: microphone-driven pulse or hue shift with sensitivity control.
-* **Scenes**: one tap sets colour or effect, brightness and sleep timer (Movie, Reading, Sleep, Night drive and more). **Auto** picks one by time of day.
-* **Car mode**: big buttons, very dim screen, brightness steps.
-* **Smooth changes**: scenes and power fade in and out (Studio sets the fade time).
-* **Night dimming**: brightness drops after sunset and returns at sunrise (uses location once, kept on the phone).
-* **Auto-reconnect**: if the strip drops (ignition off/on), the app reconnects without the picker.
-* **Home screen shortcuts**: `index.html#scene=<id>` runs a scene. Copy a link per scene in Studio, or use the four shortcuts in the manifest (long-press the installed app icon).
-* **Music**: beat detection with soft decay, pulse or hue-shift styles.
-* **Sleep timer**, **white temperature**, **raw mode tester**, **backup to a file or text**, **packet log**.
+## What is in the app
+**Four tabs**
+* **Colour**: colour wheel, brightness, white, saved colours, direct Light ON / OFF, scene chips (favourites first).
+* **Effects**: all 213 of Magic Lantern's strip modes and its 28 strip scenes, in its own groups, with search, favourites, rename and a clear "not tested / verified" label; a Rainbow row; and phone-driven effects you can build yourself.
+* **Music**: microphone / phone-audio sync (pulse, shift hue, DJ patterns). Works only while the app is open.
+* **Settings**: Connection, Vehicle & Drive, Scenes, Automation & timers, Backup & restore, Software updates.
 
-Chrome cannot connect without a tap, so a shortcut opens the app and asks for one tap on **Connect strip**; the scene runs right after.
+**Car mode** (the Car button): big buttons, very dim screen. **Driving** shows calm scenes only and limits brightness; **Parked** allows everything. You choose the mode; the app does not detect driving.
+
+**Experimental Lab** (Settings): guided hardware tests. The Hardware Rainbow test lets you run each candidate, record what you saw (moves, keeps moving after the app closes, returns after a power cycle) and only then add it as a scene. Park the car first.
+
+**Developer options** (hidden; tap the version in Settings seven times): raw protocol tools, device info (address masked), packet log, update-server admin (PIN protected).
+
+Two kinds of effect are never mixed up: **hardware effects** run inside the strip and can keep going when the app closes (once you have verified them); **phone effects** are streamed by the app and stop when it closes.
 
 ## Run it
 | Goal | How |
 |---|---|
 | Quick look in any browser | open `dist/MELK-Studio-standalone.html` (demo strip, nothing is sent) |
-| Control a real strip | host the folder over **HTTPS** (GitHub Pages, Netlify, Cloudflare Pages) and open it in **Chrome on Android**. Web Bluetooth does not exist in iOS browsers or Firefox |
-| Local development | `python3 -m http.server 8000` then open `http://localhost:8000` in desktop Chrome |
-| Install on the phone | open the HTTPS link in Chrome, menu, **Add to Home screen** (manifest and service worker included) |
-| Real APK | see `src/ble-capacitor.example.js` (Capacitor + native Bluetooth plugin, untested) |
+| Local development | `python3 -m http.server 8000 --directory www`, then open `http://localhost:8000` |
+| Control a real strip from a browser | host `www/` over **HTTPS** and open it in **Chrome on Android** (Web Bluetooth is not in iOS browsers or Firefox) |
+| Android APK | JDK 21 + Android SDK 36, then `npm ci && npm run build:android`. See BUILD-1.1.4.md |
+
+## Tests
+```
+npm test                 # node tests (protocol and the mode/scene audit against Magic Lantern's arrays, write policy, BLE adapter, scene sharing, OTA client, service worker, UI structure)
+npm run test:e2e         # headless Chromium: lifecycle, features, upgrade from 1.1.5 data, app-update flow, UI cleanup, repeated-text check, layout audit
+npm run test:tools       # signing / manifest tools (python unittest)
+ANDROID_JAR=.../android-36/android.jar sh tools/android-compile-check/check-native.sh   # native Java compile check + JUnit
+                         # needs: pip install playwright && playwright install chromium
+python3 tools/compare-release.py <unzipped older bundle>   # nothing-missing check against a published release
+```
+All of these use mocked Bluetooth and audio. They do not prove what a real strip does: see docs/HARDWARE_ACCEPTANCE.md.
 
 ## Layout
 ```
-index.html            UI shell
-css/style.css         design tokens and components
-js/protocol.js        9-byte packet builders (the only file that knows the protocol)
-js/ble.js             Web Bluetooth link, write queue, demo mode
-js/app.js             UI logic, effects engine, music, storage
-js/pwa.js, sw.js      install-to-home-screen support
-docs/PROTOCOL.md      what was decoded from the APK and what is still open
-tools/build-standalone.py   rebuilds dist/MELK-Studio-standalone.html
+www/index.html            UI shell (tabs, pages, car mode)
+www/css/style.css         design system
+www/js/protocol.js        9-byte packet builders and the Magic Lantern mode / scene tables (the only file that knows the protocol)
+www/js/sync-policy.js     what to write when a connection opens (never overwrite a running hardware effect)
+www/js/ble.js, ble-native.js   Web Bluetooth link and the native Capacitor adapter (queue, reconnect, GATT check)
+www/js/scene-dna.js       validated scene sharing and settings import
+www/js/ota.js             web-update client (version, checksum, admin-protected server address)
+www/js/app.js             UI logic, effects engine, music, storage
+www/js/audio-native.js    bridge to the Android audio plugin
+www/js/pwa.js, www/sw.js  install-to-home-screen support (removed inside the Android app)
+tests/, tests/e2e/, tests/fixtures/   suites; fixtures are the published 1.1.5 update client and a real 1.1.5 saved state
+tools/                    build-standalone.py, make-ota.py, prepare-apk.py, compare-release.py
+docs/                     PRODUCT_PROGRESS, FEATURE_MATRIX, TEST_REPORT, CHANGELOG_DEV, RELEASE_CHECKLIST,
+                          HARDWARE_ACCEPTANCE, UI_REDESIGN, MODES_MAPPING_AUDIT, RELEASE_PARITY_1.1.5, PROTOCOL, NATIVE-SCENES
 ```
 
-## Status
-The protocol was decoded from the APK's code, not captured from a live strip, and this build was tested in a
-headless browser with the demo strip. First run on real hardware: connect, then try colour, brightness, power and a
-few modes, and use **Studio, Try any mode number** to confirm the mode range. Report anything that misbehaves
-and it is a one-line change in `js/protocol.js`.
+## Releases
+App updates (a full new APK through Android's installer) are described in docs/APK_UPDATER.md and docs/APK_SIGNING_COMPATIBILITY.md; they need an APK signed with the same key as the installed app.
 
+Web updates go over the air (`tools/make-ota.py`, then upload to the OTA repository). **The 1.1.6 package has not been built or published**; see docs/RELEASE_CHECKLIST.md. Native changes (Java, manifest, permissions) always need a new APK.
+
+## Status
+The protocol was decoded from the Magic Lantern APK and checked on one controller (MELK-0C21 F1). Colour, brightness and power work. Which hardware command produces the moving Rainbow is **not yet proven**; use the Lab to find out.
 
 ## Native audio (APK only)
-Whole-phone sound sync (YouTube, Spotify, earphones) uses Android's Visualizer API.
-Files: `native/android/AudioLevelPlugin.java`, `native/android/MainActivity.java` (replace the existing one),
-and `native/android/AndroidManifest-add.txt` (two permission lines). `js/audio-native.js` is the web side.
-Copy the two Java files to `android/app/src/main/java/studio/melk/app/`, add the permissions, then `npx cap sync` and rebuild.
-Some phones or apps block Visualizer; in that case the app still works with the microphone in the browser.
+The registered AudioLevel plugin reads the phone microphone and emits bass intensity. Audio samples are not stored or uploaded. It does not capture another app's internal playback or sound playing only through earphones. Allow Microphone permission when starting Music. The active Java sources are under `android/app/src/main/java/com/bleled/com/`; files under `native/` are historical examples.

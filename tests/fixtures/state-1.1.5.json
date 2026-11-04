@@ -1,0 +1,373 @@
+{
+ "auto": false,
+ "autoInterval": 45,
+ "autoStyle": "time",
+ "beatCooldown": 360,
+ "beatCountView": 0,
+ "beatGate": 55,
+ "br": 80,
+ "carSeeded": true,
+ "dayBr": 80,
+ "djInterval": 7,
+ "fadeMs": 2000,
+ "flowSec": 60,
+ "geo": null,
+ "h": 180,
+ "lastFail": null,
+ "modeFav": {
+  "133": 1
+ },
+ "modeHidden": {},
+ "modeNames": {
+  "133": "My flow"
+ },
+ "modePersistent": {
+  "128": true
+ },
+ "musicStyle": "dj",
+ "native": {
+  "at": 1793679462891,
+  "id": 11,
+  "kind": "scene"
+ },
+ "nativeLast": 11,
+ "nativeSeeded": true,
+ "nativeTested": {},
+ "on": true,
+ "palette": [
+  "#FFB347",
+  "#FF4D6D",
+  "#7C5CFF",
+  "#2EC4B6",
+  "#FFFFFF",
+  "#66FFFF"
+ ],
+ "persistentOnly": false,
+ "powerProfile": "current",
+ "preserveHardware": false,
+ "routineEnabled": true,
+ "routineLast": {},
+ "routines": [
+  {
+   "scene": "off",
+   "time": "21:30"
+  }
+ ],
+ "s": 0.6,
+ "scenes": [
+  {
+   "br": 55,
+   "id": "relax",
+   "name": "Relax",
+   "seq": "amb1",
+   "type": "seq"
+  },
+  {
+   "br": 18,
+   "color": "#FF9A4D",
+   "id": "movie",
+   "name": "Movie",
+   "type": "color"
+  },
+  {
+   "br": 75,
+   "id": "reading",
+   "name": "Reading",
+   "type": "white",
+   "warm": 15
+  },
+  {
+   "br": 35,
+   "id": "dinner",
+   "name": "Dinner",
+   "nativeScene": 4,
+   "seq": "p3",
+   "type": "seq"
+  },
+  {
+   "br": 100,
+   "id": "party",
+   "name": "Party",
+   "style": "spectrum",
+   "type": "music"
+  },
+  {
+   "br": 85,
+   "id": "focus",
+   "name": "Focus",
+   "type": "white",
+   "warm": 80
+  },
+  {
+   "br": 60,
+   "color": "#FFC15A",
+   "id": "morning",
+   "name": "Morning",
+   "type": "color"
+  },
+  {
+   "br": 12,
+   "id": "sleep",
+   "name": "Sleep",
+   "seq": "amb2",
+   "sleep": 60,
+   "type": "seq"
+  },
+  {
+   "br": 10,
+   "color": "#FF9A4D",
+   "id": "c-night",
+   "name": "Night drive",
+   "type": "color"
+  },
+  {
+   "br": 20,
+   "id": "c-cruise",
+   "name": "Cruise",
+   "seq": "amb2",
+   "type": "seq"
+  },
+  {
+   "br": 40,
+   "id": "c-chill",
+   "name": "Parked chill",
+   "seq": "amb1",
+   "type": "seq"
+  },
+  {
+   "br": 80,
+   "color": "#66FFFF",
+   "id": "u1793679461600",
+   "name": "Upgrade scene",
+   "type": "color"
+  }
+ ],
+ "sens": 60,
+ "seqs": [
+  {
+   "id": "amb1",
+   "name": "Ambient flow",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF8A3D",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#FF4D7A",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#B14DFF",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#4A5BFF",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#1FC8C0",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#3DDC97",
+     "fade": 14000,
+     "hold": 5000
+    },
+    {
+     "c": "#FFC15A",
+     "fade": 14000,
+     "hold": 5000
+    }
+   ]
+  },
+  {
+   "id": "amb2",
+   "name": "Ambient night",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF6A2B",
+     "fade": 18000,
+     "hold": 8000
+    },
+    {
+     "c": "#C2245E",
+     "fade": 18000,
+     "hold": 8000
+    },
+    {
+     "c": "#5B2BB8",
+     "fade": 18000,
+     "hold": 8000
+    },
+    {
+     "c": "#1F3FBF",
+     "fade": 18000,
+     "hold": 8000
+    },
+    {
+     "c": "#0E7C86",
+     "fade": 18000,
+     "hold": 8000
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "name": "Slow sunset",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF7A18",
+     "fade": 3000,
+     "hold": 1200
+    },
+    {
+     "c": "#FF2E63",
+     "fade": 3000,
+     "hold": 1200
+    },
+    {
+     "c": "#5B2A86",
+     "fade": 3000,
+     "hold": 1200
+    },
+    {
+     "c": "#1B1464",
+     "fade": 3000,
+     "hold": 1200
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "name": "Breathing",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FFB347",
+     "fade": 2200,
+     "hold": 300
+    },
+    {
+     "c": "#2A1500",
+     "fade": 2200,
+     "hold": 300
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "name": "Candle",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF9A2E",
+     "fade": 220,
+     "hold": 140
+    },
+    {
+     "c": "#FF7A18",
+     "fade": 260,
+     "hold": 90
+    },
+    {
+     "c": "#FFB347",
+     "fade": 200,
+     "hold": 180
+    },
+    {
+     "c": "#FF8A24",
+     "fade": 240,
+     "hold": 110
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "name": "Rainbow (phone)",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF0000",
+     "fade": 1400,
+     "hold": 0
+    },
+    {
+     "c": "#FFE600",
+     "fade": 1400,
+     "hold": 0
+    },
+    {
+     "c": "#00D26A",
+     "fade": 1400,
+     "hold": 0
+    },
+    {
+     "c": "#00D1FF",
+     "fade": 1400,
+     "hold": 0
+    },
+    {
+     "c": "#2F4BFF",
+     "fade": 1400,
+     "hold": 0
+    },
+    {
+     "c": "#D400FF",
+     "fade": 1400,
+     "hold": 0
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "name": "Party flash",
+   "speed": 1,
+   "steps": [
+    {
+     "c": "#FF0055",
+     "fade": 0,
+     "hold": 260
+    },
+    {
+     "c": "#00E5FF",
+     "fade": 0,
+     "hold": 260
+    },
+    {
+     "c": "#FFE600",
+     "fade": 0,
+     "hold": 260
+    }
+   ]
+  }
+ ],
+ "showAll": false,
+ "speed": 50,
+ "sunCap": 25,
+ "sunDim": false,
+ "sunState": "day",
+ "tab": "studio",
+ "verify": {
+  "mode:103": {
+   "appClose": true,
+   "at": "2026-11-03",
+   "moves": true
+  },
+  "mode:128": {
+   "appClose": true,
+   "at": "migrated",
+   "moves": true,
+   "powerCycle": true
+  }
+ },
+ "verifyMigrated": true,
+ "warm": 50
+}

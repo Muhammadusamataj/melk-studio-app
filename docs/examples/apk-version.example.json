@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "packageName": "com.bleled.com",
+  "versionName": "1.1.8",
+  "versionCode": 10108,
+  "url": "https://muhammadusamataj.github.io/melk-studio-ota-/apk/MELK-Studio-1.1.8.apk",
+  "sha256": "REPLACE_WITH_THE_REAL_64_HEX_SHA256_OF_THE_APK",
+  "size": 0,
+  "signingCertSha256": "REPLACE_WITH_THE_REAL_64_HEX_SHA256_OF_THE_SIGNING_CERTIFICATE",
+  "minSdk": 24,
+  "notes": "One short sentence about what changed."
+}
