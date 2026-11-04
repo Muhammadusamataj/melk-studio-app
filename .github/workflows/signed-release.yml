@@ -1,0 +1,101 @@
+name: Build verified signed release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Release version, e.g. 1.1.8'
+        required: true
+        default: '1.1.8'
+      version_code:
+        description: 'Android versionCode (must exceed 10107)'
+        required: true
+        default: '10108'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MELK_VERSION_NAME: ${{ inputs.version_name }}
+      MELK_VERSION_CODE: ${{ inputs.version_code }}
+      MELK_REQUIRE_RELEASE_SIGNING: 'true'
+      KEYSTORE_B64: ${{ secrets.MELK_KEYSTORE_BASE64 }}
+      STORE_PASSWORD: ${{ secrets.MELK_STORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.MELK_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.MELK_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate release input and secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$MELK_VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version name"; exit 1; }
+          [[ "$MELK_VERSION_CODE" =~ ^[0-9]+$ ]] && (( MELK_VERSION_CODE > 10107 )) || { echo "versionCode must exceed 10107"; exit 1; }
+          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "Missing required signing secret: $name"; exit 1; }
+          done
+      - name: Install dependencies
+        run: npm ci
+      - name: Sync Android
+        run: npx cap sync android
+      - name: Configure signing securely
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > android/melk-release.jks
+          {
+            printf 'storeFile=melk-release.jks\n'
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > android/keystore.properties
+          keytool -list -keystore android/melk-release.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+      - name: Build signed release
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --console=plain assembleRelease
+      - name: Verify APK and create manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk "release/MELK-Studio-${MELK_VERSION_NAME}.apk"
+          python3 tools/make-apk-manifest.py "release/MELK-Studio-${MELK_VERSION_NAME}.apk" \
+            --base-url https://muhammadusamataj.github.io/melk-studio-ota-/apk/ \
+            --out release/apk-version.json
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          m=json.loads(Path('release/apk-version.json').read_text())
+          assert m['versionName']==os.environ['MELK_VERSION_NAME']
+          assert m['versionCode']==int(os.environ['MELK_VERSION_CODE'])
+          assert m['packageName']=='com.bleled.com'
+          assert m['signingCertSha256']
+          print('Release APK metadata, signing certificate and manifest verified.')
+          PY
+      - name: Remove signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f android/melk-release.jks android/keystore.properties
+      - name: Upload verified APK and manifest (not published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MELK-Studio-signed-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 14

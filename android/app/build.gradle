@@ -21,8 +21,8 @@ android {
         applicationId "com.bleled.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10107
-        versionName "1.1.7"
+        versionCode (System.getenv("MELK_VERSION_CODE") ? Integer.parseInt(System.getenv("MELK_VERSION_CODE")) : 10107)
+        versionName (System.getenv("MELK_VERSION_NAME") ?: "1.1.7")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -46,6 +46,7 @@ android {
         }
         release {
             if (keystorePropsFile.exists()) signingConfig signingConfigs.melk
+            else if (System.getenv("MELK_REQUIRE_RELEASE_SIGNING") == "true") throw new GradleException("Release signing secrets are not configured.")
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
