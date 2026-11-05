@@ -14,6 +14,16 @@ if (keystorePropsFile.exists()) {
     }
 }
 
+def releaseRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+def buildName = System.getenv('MELK_VERSION_NAME') ?: '1.2.1'
+def buildCode = System.getenv('MELK_VERSION_CODE') ?: '10201'
+if (!(buildName ==~ /\d+\.\d+\.\d+/) || !(buildCode ==~ /[1-9]\d*/) || buildCode.toBigInteger() > 2147483647) {
+    throw new GradleException('Invalid build version inputs.')
+}
+if (releaseRequested && !keystorePropsFile.exists()) {
+    throw new GradleException('Release signing is required. Enroll the permanent keystore; release builds never use a random debug key.')
+}
+
 android {
     namespace = "com.bleled.com"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -21,8 +31,8 @@ android {
         applicationId "com.bleled.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10200
-        versionName "1.2.0"
+        versionCode buildCode.toInteger()
+        versionName buildName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

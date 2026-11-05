@@ -65,9 +65,9 @@ class Compatibility(unittest.TestCase):
         self.assertTrue(any('not signed' in w for w in compare.decide(apk(), apk(code=10107, signers=[]))[1]))
     def test_a_signature_that_does_not_verify_is_blocked(self):
         self.assertFalse(compare.decide(apk(), apk(code=10107, verified=False))[0])
-    def test_key_rotation_with_an_overlapping_certificate_is_accepted(self):
+    def test_overlapping_signers_are_not_proof_of_compatibility(self):
         old = apk(signers=[{'sha256': A, 'dn': '', 'debug': False}, {'sha256': B, 'dn': '', 'debug': False}])
-        self.assertTrue(compare.decide(old, apk(code=10107, key=B))[0])
+        self.assertFalse(compare.decide(old, apk(code=10107, key=B))[0])
 
 class Manifest(unittest.TestCase):
     def setUp(self):

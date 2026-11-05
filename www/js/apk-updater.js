@@ -123,12 +123,16 @@
         const m = v.manifest;
         if (m.versionCode <= info.versionCode) { emit({ state: 'uptodate', manifest: m, message: 'MELK Studio is up to date (build ' + info.versionCode + ').' }); return; }
         if (m.minSdk && m.minSdk > info.sdk) { emit({ state: 'error', manifest: m, message: 'This update needs a newer version of Android than this phone has.' }); return; }
+        const installedCerts = (info.signingSha256 || []).map(fp).filter(Boolean);
+        if (m.signingCertSha256 && (!installedCerts.length || !installedCerts.includes(m.signingCertSha256))) {
+          emit({ state: 'incompatible', manifest: m, message: 'This release uses a different signing key. It cannot update this installation in place. Export Settings → Backup and follow the reviewed migration instructions; do not uninstall without a verified backup.' }); return;
+        }
         emit({ state: 'available', manifest: m, message: '' });
       } catch (e) {
         // A missing release manifest means no full APK release has been published yet.
         // Do not claim the installed APK is the latest, and do not invent a download.
         const detail = String(e && e.message ? e.message : e);
-        if (/\\b404\\b/.test(detail)) {
+        if (/\b404\b/.test(detail)) {
           emit({ state: 'idle', message: 'No full-app update has been published yet. Web updates can still be checked above.' });
           return;
         }
@@ -137,7 +141,7 @@
     }
 
     async function download() {
-      if (!plugin || !st.manifest || (st.state !== 'available' && st.state !== 'error' && st.state !== 'uptodate')) return;
+      if (!plugin || !st.manifest || st.state !== 'available') return;
       const m = st.manifest;
       if (m.versionCode <= (st.info ? st.info.versionCode : 0)) return;
       emit({ state: 'downloading', percent: 0, downloaded: 0, total: m.size, message: '', problems: [], fromCache: false });

@@ -10,7 +10,7 @@ async function check(clientFile, running, manifest, opts = {}) {
   const els = new Map(), handlers = {}, calls = [];
   const el = (id) => { if (!els.has(id)) els.set(id, { hidden: true, textContent: '', value: 0, removeAttribute() {}, classList: { add() {}, remove() {} }, addEventListener(t, f) { handlers[id + ':' + t] = f; } }); return els.get(id); };
   const ctx = vm.createContext({ URL, TextEncoder, console, confirm: () => true, document: { readyState: 'complete', getElementById: el }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, setTimeout: () => {},
-    Capacitor: { isNativePlatform: () => true, Plugins: { CapacitorUpdater: { current: async () => ({ bundle: { version: running } }), notifyAppReady: async () => {}, download: async (o) => { calls.push(['download', o]); return { id: 'b1', version: o.version }; }, next: async (o) => { calls.push(['next', o]); }, set: async (o) => { calls.push(['set', o]); }, addListener: async () => ({ remove() {} }) }, CapacitorHttp: { get: async () => ({ status: 200, data: manifest }) } } } });
+    Capacitor: { isNativePlatform: () => true, Plugins: { ApkUpdater: opts.nativeCode ? { getInfo: async()=>({versionCode:opts.nativeCode}) } : undefined, CapacitorUpdater: { current: async () => ({ bundle: { version: running } }), notifyAppReady: async () => {}, download: async (o) => { calls.push(['download', o]); return { id: 'b1', version: o.version }; }, next: async (o) => { calls.push(['next', o]); }, set: async (o) => { calls.push(['set', o]); }, addListener: async () => ({ remove() {} }) }, CapacitorHttp: { get: async () => ({ status: 200, data: manifest }) } } } });
   ctx.window = ctx; vm.runInContext(fs.readFileSync(clientFile, 'utf8'), ctx);
   await ctx.MelkOta.check();
   const out = { status: el('otaStatus').textContent, canInstall: !el('otaInstall').hidden, calls };
@@ -53,4 +53,13 @@ test('the packaged client behaves the same way for the next release', async () =
   assert.ok(/^\d+\.\d+\.\d+$/.test(v) && (a > 1 || b > 1 || c >= 6), 'packaged version ' + v);
   assert.match((await check(NEW, 'builtin', man(next))).status, new RegExp('New web update v' + next.replace(/\./g, '\\.')));
   assert.match((await check(NEW, 'builtin', man(v))).status, /Up to date/);
+});
+
+test('new OTA client enforces minimum native version before offering or downloading',async()=>{
+ const version='9.0.0';
+ const allowed=await check(NEW,'builtin',man(version,{minNativeVersionCode:10201}),{nativeCode:10201,install:true});assert.equal(allowed.canInstall,true);assert.ok(allowed.calls.some(c=>c[0]==='download'));
+ for(const nativeCode of [undefined,10200]){const blocked=await check(NEW,'builtin',man(version,{minNativeVersionCode:10201}),{nativeCode,install:true});assert.equal(blocked.canInstall,false);assert.match(blocked.status,/APK|APK first/);assert.equal(blocked.calls.some(c=>c[0]==='download'),false);}
+});
+test('invalid native compatibility requirements are refused',async()=>{
+ for(const minimum of [0,-1,'10201',1.5,2147483648]){const r=await check(NEW,'builtin',man('9.0.0',{minNativeVersionCode:minimum}),{nativeCode:10201});assert.equal(r.canInstall,false);assert.match(r.status,/Invalid minimum native version/);}
 });

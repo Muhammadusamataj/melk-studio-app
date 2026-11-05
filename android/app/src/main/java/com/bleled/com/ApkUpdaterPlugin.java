@@ -346,7 +346,8 @@ public class ApkUpdaterPlugin extends Plugin {
         if (Build.VERSION.SDK_INT >= 28 && pi.signingInfo != null) {
             SigningInfo si = pi.signingInfo;
             addCerts(certs, si.getApkContentsSigners());
-            if (!si.hasMultipleSigners()) addCerts(certs, si.getSigningCertificateHistory()); // key rotation lineage
+            // Stable production identity: compare current signers, never an ancestor
+            // certificate that could make an incompatible reverse rotation look safe.
         } else {
             addCerts(certs, pi.signatures);
         }

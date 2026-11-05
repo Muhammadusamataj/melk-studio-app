@@ -78,7 +78,7 @@ test('check: newer build is offered, same or older is "up to date"', async () =>
 test('check: bad manifest, other package, network failure and too-old Android are errors with a reason', async () => {
   let r = rig({ getJson: async () => good({ sha256: 'bad' }) }); await r.c.check(); assert.equal(r.c.st.state, 'error'); assert.match(r.c.st.message, /checksum/i); assert.equal(r.c.st.manifest, null);
   r = rig({ getJson: async () => good({ packageName: 'com.other.app' }) }); await r.c.check(); assert.equal(r.c.st.state, 'error'); assert.match(r.c.st.message, /different app/);
-  r = rig({ getJson: async () => { throw new Error('Server answered 404'); } }); await r.c.check(); assert.equal(r.c.st.state, 'error'); assert.match(r.c.st.message, /404/);
+  r = rig({ getJson: async () => { throw new Error('Server answered 404'); } }); await r.c.check(); assert.equal(r.c.st.state, 'idle'); assert.match(r.c.st.message, /No full-app update has been published/);
   r = rig({ getJson: async () => good({ minSdk: 40 }) }); await r.c.check(); assert.equal(r.c.st.state, 'error'); assert.match(r.c.st.message, /newer version of Android/);
 });
 test('download: sends exactly the verified manifest fields and ends at 100 percent', async () => {
@@ -163,4 +163,13 @@ test('after a finished update the next start reports it and deletes the download
 test('a pending marker from an install that never happened is dropped silently', async () => {
   const r = rig(); r.store.set(A.PENDING_KEY, JSON.stringify({ code: 10108, name: '1.1.8' })); await r.c.start();
   assert.equal(r.c.st.message, ''); assert.equal(r.store.get(A.PENDING_KEY), undefined); assert.equal(r.calls.some((x) => x[0] === 'cleanup'), false);
+});
+
+test('a missing feed is distinguished from a network/HTTP failure and does not claim up to date', async () => {
+ for (const code of [4040,403,500]) { const r=rig({getJson:async()=>{throw Error('Server answered '+code)}});await r.c.check();assert.equal(r.c.st.state,'error'); }
+ const r=rig({getJson:async()=>{throw Error('Server answered 404')}});await r.c.check();assert.equal(r.c.st.manifest,null);assert.doesNotMatch(r.c.st.message,/up to date/i);
+});
+test('manifest certificate mismatch blocks download before any transfer or installer activity',async()=>{
+ const r=rig({getJson:async()=>good({signingCertSha256:'d'.repeat(64)})});await r.c.check();assert.equal(r.c.st.state,'incompatible');assert.match(r.c.st.message,/cannot update this installation in place/);await r.c.download();await r.c.install();assert.equal(r.calls.some(c=>c[0]==='download'||c[0]==='install'),false);
+ const same=rig({getJson:async()=>good({signingCertSha256:'c'.repeat(64)})});await same.c.check();assert.equal(same.c.st.state,'available');await same.c.download();assert.equal(same.c.st.state,'ready');
 });

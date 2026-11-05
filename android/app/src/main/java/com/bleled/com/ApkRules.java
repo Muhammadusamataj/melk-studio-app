@@ -110,11 +110,7 @@ final class ApkRules {
         if (apk.certs.isEmpty()) {
             problems.add(NO_SIGNATURE);
         } else {
-            boolean overlap = false;
-            for (String c : apk.certs) {
-                if (installed.certs.contains(c)) { overlap = true; break; }
-            }
-            if (!overlap) problems.add(SIGNATURE_MISMATCH);
+            if (!installed.certs.equals(apk.certs)) problems.add(SIGNATURE_MISMATCH);
             if (manifest.signingCertSha256 != null && !apk.certs.contains(manifest.signingCertSha256)) problems.add(MANIFEST_SIGNATURE);
         }
         if (manifest.minSdk > deviceSdk) problems.add(MIN_SDK);

@@ -514,7 +514,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
         <div class="head"><h2>Smart Music Sync</h2></div>
         <button class="big" id="musicBtn" type="button">Start listening</button>
         <label class="field"><span>Audio source</span><select id="musicSource" class="text"><option value="auto">Auto · prefer Device Audio</option><option value="device">Device Audio</option><option value="microphone">Microphone</option></select></label>
-        <p class="hint" id="musicNotice" role="status">Device Audio requires Android 10+, native app 1.2.0 and Android capture consent. Some apps prohibit capture. Microphone fallback is always your choice.</p>
+        <p class="hint" id="musicNotice" role="status">Device Audio requires Android 10+, native app 1.2.0+ and Android capture consent. Some apps prohibit capture. Microphone fallback is always your choice.</p>
         <button id="musicFallback" class="btn ghost block" type="button" hidden>Use microphone instead</button>
         <div class="musicInfo"><span id="musicActiveSource">Not capturing</span><span id="musicConnection">Bluetooth disconnected</span></div>
         <canvas id="musicSpectrum" width="320" height="72" aria-label="Live analyzed audio spectrum"></canvas>
@@ -565,7 +565,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
 
       <button class="aboutCard" type="button" id="aboutVersion" aria-label="About MELK Studio">
         <b>MELK Studio</b>
-        <span id="aboutText">Version 1.2.0</span>
+        <span id="aboutText">Version 1.2.1</span>
         <small id="aboutHint">Independent app. Not affiliated with any LED strip maker.</small>
       </button>
     </section>
@@ -725,7 +725,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
       <div class="btnRow"><button class="btn main" id="otaCheck" type="button">Check for updates</button><button class="btn ghost" id="otaInstall" type="button" hidden>Download &amp; install</button></div>
       <details class="fine"><summary>Version and server</summary>
         <div class="kvlist">
-          <div class="kv"><span>App version</span><strong id="otaVersion">v1.2.0</strong></div>
+          <div class="kv"><span>App version</span><strong id="otaVersion">v1.2.1</strong></div>
           <div class="kv"><span>Updater</span><strong id="otaCapability">Checking…</strong></div>
           <div class="kv"><span>Update server</span><strong id="otaHost">…</strong></div>
         </div>
@@ -1859,7 +1859,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
 /* MELK Studio self-hosted OTA. No Bluetooth code is changed here. */
 (function(g) {
   'use strict';
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.2.1';
   const DEFAULT_URL = 'https://muhammadusamataj.github.io/melk-studio-ota-/ota/melk-version.json';
   const KEY_URL = 'melk.ota.url', KEY_PIN = 'melk.admin', KEY_FAIL = 'melk.admin.fail';
   const store = {
@@ -1895,6 +1895,16 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
     }
     catch (_) { return APP_VERSION; }
   }
+  async function compatible(info) {
+    const minimum = info.minNativeVersionCode;
+    if (minimum === undefined) return true; // backwards-compatible web-only manifests remain supported
+    if (!Number.isInteger(minimum) || minimum < 1 || minimum > 2147483647) throw new Error('Invalid minimum native version');
+    const apk = native && g.Capacitor.Plugins && g.Capacitor.Plugins.ApkUpdater;
+    if (!apk || typeof apk.getInfo !== 'function') throw new Error('Install a compatible Android APK before this web update (build ' + minimum + '+).');
+    const installed = await apk.getInfo();
+    if (!Number.isInteger(installed.versionCode) || installed.versionCode < minimum) throw new Error('This web update needs Android app build ' + minimum + '+. Update the APK first.');
+    return true;
+  }
   async function check(manual) {
     if (busy) return;
     setBusy(true);
@@ -1925,6 +1935,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
         new URL(info.url).origin !== new URL(activeUrl()).origin) throw new Error('Invalid update manifest');
       const current=await runningVersion();
       if (!newer(current,info.version)) { status('Up to date (v'+current+'). Server has v'+info.version+' at '+new URL(activeUrl()).host+'.'); return; }
+      await compatible(info);
       available=info;
       if (!updater) { status('v'+info.version+' is available, but this APK has no native OTA updater. Rebuild/install an OTA-enabled APK once.'); return; }
       status('New web update v'+info.version+' available. Install only when you are not controlling the strip.');
@@ -1935,6 +1946,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
   async function install() {
     if (!updater || !available || busy) return;
     const info=available;
+    try { await compatible(info); } catch (e) { status(e.message); return; }
     if (!g.confirm('Download MELK Studio v'+info.version+'? Apply after restarting the app.')) return;
     setBusy(true);
     const progress=el('otaProgress');
@@ -2207,12 +2219,16 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
         const m = v.manifest;
         if (m.versionCode <= info.versionCode) { emit({ state: 'uptodate', manifest: m, message: 'MELK Studio is up to date (build ' + info.versionCode + ').' }); return; }
         if (m.minSdk && m.minSdk > info.sdk) { emit({ state: 'error', manifest: m, message: 'This update needs a newer version of Android than this phone has.' }); return; }
+        const installedCerts = (info.signingSha256 || []).map(fp).filter(Boolean);
+        if (m.signingCertSha256 && (!installedCerts.length || !installedCerts.includes(m.signingCertSha256))) {
+          emit({ state: 'incompatible', manifest: m, message: 'This release uses a different signing key. It cannot update this installation in place. Export Settings → Backup and follow the reviewed migration instructions; do not uninstall without a verified backup.' }); return;
+        }
         emit({ state: 'available', manifest: m, message: '' });
       } catch (e) {
         // A missing release manifest means no full APK release has been published yet.
         // Do not claim the installed APK is the latest, and do not invent a download.
         const detail = String(e && e.message ? e.message : e);
-        if (/\\b404\\b/.test(detail)) {
+        if (/\b404\b/.test(detail)) {
           emit({ state: 'idle', message: 'No full-app update has been published yet. Web updates can still be checked above.' });
           return;
         }
@@ -2221,7 +2237,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
     }
 
     async function download() {
-      if (!plugin || !st.manifest || (st.state !== 'available' && st.state !== 'error' && st.state !== 'uptodate')) return;
+      if (!plugin || !st.manifest || st.state !== 'available') return;
       const m = st.manifest;
       if (m.versionCode <= (st.info ? st.info.versionCode : 0)) return;
       emit({ state: 'downloading', percent: 0, downloaded: 0, total: m.size, message: '', problems: [], fromCache: false });
@@ -3460,7 +3476,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPageId && !$('#dlg').open && $('#car').hidden) closePage(false); });
 
-  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0';
+  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.1';
   $('#aboutText').textContent = 'Version ' + APP_VER;
   let aboutTaps = 0, aboutAt = 0;
   function refreshDev() {
@@ -3685,7 +3701,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
   }
   function renderNavSubs() {
     const v = $('#navVehicleSub'); if (v) v.textContent = veh().name + ' · ' + (S.driveMode === 'driving' ? 'Driving' : 'Parked');
-    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0');
+    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.1');
   }
 
   /* ---------- Scene DNA: share and import ---------- */
