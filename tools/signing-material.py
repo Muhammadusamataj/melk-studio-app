@@ -30,6 +30,7 @@ def materialize(directory, properties, env):
     if properties.exists(): raise SystemExit('Refusing to overwrite an existing keystore.properties.')
     directory.mkdir(mode=0o700, parents=True, exist_ok=False)
     store = directory / 'release.p12'
+    complete = False
     try:
         data = base64.b64decode(env['MELK_KEYSTORE_BASE64'], validate=True)
         if not 32 < len(data) <= 2*1024*1024: raise ValueError('size')
@@ -44,11 +45,14 @@ def materialize(directory, properties, env):
         with properties.open('x', encoding='ascii') as f:
             os.chmod(properties, 0o600)
             f.write(''.join(k+'='+property_value(v)+'\n' for k,v in entries.items()))
+        complete = True
         print('Signing material checked against the public certificate pin.')
     except (ValueError, OSError):
         raise SystemExit('Signing material could not be verified. Secret values are not displayed.')
     finally:
-        if not properties.exists(): store.unlink(missing_ok=True); directory.rmdir()
+        if not complete:
+            properties.unlink(missing_ok=True)
+            store.unlink(missing_ok=True); directory.rmdir()
 
 if __name__ == '__main__':
     p=argparse.ArgumentParser(); p.add_argument('--directory',required=True,type=pathlib.Path); p.add_argument('--properties',default='android/keystore.properties',type=pathlib.Path)
