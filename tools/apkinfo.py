@@ -32,16 +32,23 @@ def run(cmd):
 def parse_badging(text):
     m = re.search(r"package: name='([^']*)' versionCode='(\d+)' versionName='([^']*)'", text)
     if not m: return None
-    sdk = re.search(r"^sdkVersion:'(\d+)'", text, re.M)
+    sdk = re.search(r"^(?:sdkVersion|minSdkVersion):'(\d+)'", text, re.M)
     return {'package': m.group(1), 'versionCode': int(m.group(2)), 'versionName': m.group(3), 'minSdk': int(sdk.group(1)) if sdk else None,
             'debuggable': bool(re.search(r'^application-debuggable', text, re.M))}
 
 def parse_apksigner(text):
     schemes = {int(n): v == 'true' for n, v in re.findall(r'Verified using v(\d) scheme[^:]*: (true|false)', text)}
     verified = text.lstrip().startswith('Verifies') and 'DOES NOT VERIFY' not in text
-    dns = {int(n): d.strip() for n, d in re.findall(r'Signer #(\d+) certificate DN: (.*)', text)}
-    signers = [{'sha256': h, 'dn': dns.get(int(n), ''), 'debug': 'CN=Android Debug' in dns.get(int(n), '')} for n, h in re.findall(r'Signer #(\d+) certificate SHA-256 digest: ([0-9a-f]{64})', text)]
-    return {'verified': verified, 'schemes': schemes, 'signers': signers}
+    label = r'((?:V\d+(?:\.\d+)? )?Signer(?: #\d+)?)'
+    dns = {n: d.strip() for n, d in re.findall(label + r':? certificate DN: (.*)', text)}
+    signers, seen = [], set()
+    for n, h in re.findall(label + r':? certificate SHA-256 digest: ([0-9a-fA-F]{64})\b', text):
+        identity = h.lower()
+        if identity in seen: continue
+        seen.add(identity)
+        signers.append({'sha256': h.lower(), 'dn': dns.get(n, ''), 'debug': 'CN=Android Debug' in dns.get(n, '')})
+    count = re.search(r'^Number of signers: (\d+)', text, re.M)
+    return {'verified': verified, 'schemes': schemes, 'signers': signers, 'signerCount': int(count.group(1)) if count else None}
 
 def file_sha256(path):
     h = hashlib.sha256()
@@ -63,6 +70,7 @@ def read_apk(path):
     if signer:
         code, out = run([signer, 'verify', '--verbose', '--print-certs', path])
         s = parse_apksigner(out)
+        s['verified'] = s['verified'] and code == 0
         info.update(s); info['source']['signing'] = 'apksigner'
     if info['package'] is None or not info['signers']:
         try:

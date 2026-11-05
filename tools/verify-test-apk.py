@@ -18,6 +18,7 @@ assert info['verified'] is True, 'APK signature verification failed'
 assert info['package'] == 'com.bleled.com', info['package']
 assert info['versionName'] == '1.2.0' and info['versionCode'] == 10200, 'Wrong APK version'
 assert len(info['signers']) == 1, 'Unexpected signer count'
+assert info.get('signerCount') == 1, 'apksigner did not report exactly one signer'
 assert info['minSdk'] == 24, 'Unexpected minimum Android version'
 assert info['debuggable'] is True, 'Expected a test/debug build'
 with zipfile.ZipFile(source) as apk:

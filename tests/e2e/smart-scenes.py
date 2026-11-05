@@ -74,7 +74,8 @@ async def main():
         await page.evaluate('__capture.deny=false')
         await page.click('#musicFallback'); await page.wait_for_timeout(200)
         assert await page.evaluate('__capture.sources') == ['device','microphone']
-        await page.click('#musicBtn'); await page.click('#t-color'); await page.click('#btnCar'); await page.click('#carDriving'); await page.click('#carExit')
+        await page.click('#musicBtn'); await page.click('#t-fx'); await page.click('#btnCar'); await page.click('#carDriving'); await page.click('#carExit')
+        assert await page.locator('#tab-fx').is_hidden(), 'Entering Driving must close an already open Effects browser'
         assert await page.locator('#quickEdit').is_disabled()
         assert await page.eval_on_selector_all('#scenes button','es=>es.every(e=>e.disabled)')
         await page.click('#t-fx')

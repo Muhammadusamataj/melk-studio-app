@@ -1355,6 +1355,7 @@
     if (S.driveMode === mode) return;
     S.driveMode = mode; save();
     if (mode === 'driving') {
+      if (S.tab === 'fx') showTab('color');
       if (rotation) rotation.stop(); musicSession++; if (window.MelkSmartAudio) MelkSmartAudio.stop();
       // Replace anything moving or hardware-driven with the static colour, and respect the brightness limit.
       const curScene = S.scenes.find((x) => x.id === activeScene);
