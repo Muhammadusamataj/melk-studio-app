@@ -68,10 +68,10 @@ public class ApkRulesTest {
         assertTrue(v.problems.containsAll(Arrays.asList(ApkRules.PACKAGE_MISMATCH, ApkRules.MANIFEST_PACKAGE.equals("x") ? "" : ApkRules.DOWNGRADE, ApkRules.SIGNATURE_MISMATCH, ApkRules.MANIFEST_VERSION)));
         assertTrue(v.message.length() > 50);
     }
-    @Test public void aRotatedKeyThatStillContainsTheOldCertificateIsAccepted() {
-        // the installed app lists its signing history; an update signed by any certificate in it, or sharing one, is compatible
+    @Test public void anOverlappingSignerSetDoesNotProveCompatibility() {
+        // A subset of the current signers is not a valid same-identity update.
         ApkRules.Identity inst = new ApkRules.Identity(PKG, 10106, "1.1.6", Arrays.asList(KEY_A, KEY_B));
-        assertTrue(ApkRules.validate(inst, apk(PKG, 10107, KEY_B), manifest(10107), 34).ok);
+        assertFalse(ApkRules.validate(inst, apk(PKG, 10107, KEY_B), manifest(10107), 34).ok);
     }
     @Test public void fingerprintsAreNormalised() {
         String colon = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99";

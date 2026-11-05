@@ -12,7 +12,9 @@ ap = argparse.ArgumentParser()
 ap.add_argument("version")
 ap.add_argument("base_url")
 ap.add_argument("--src", default="www", help="web folder (the one Capacitor uses as webDir)")
+ap.add_argument('--min-native-code', type=int, help='minimum native build; older clients cannot retroactively enforce this field')
 a = ap.parse_args()
+if a.min_native_code is not None and not 1 <= a.min_native_code <= 2147483647: raise SystemExit('Invalid minimum native versionCode')
 
 src = pathlib.Path(a.src)
 if not (src / "index.html").exists():
@@ -34,6 +36,7 @@ with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
 digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
 base = a.base_url.rstrip("/") + "/"
 info = {"version": a.version, "url": base + zip_path.name, "sha256": digest}
+if a.min_native_code is not None: info["minNativeVersionCode"] = a.min_native_code
 (out / "melk-version.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
 print(f"wrote {zip_path} and {out/'melk-version.json'}")
 print(json.dumps(info, indent=2))

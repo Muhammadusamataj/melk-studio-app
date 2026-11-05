@@ -126,7 +126,7 @@
         <div class="head"><h2>Smart Music Sync</h2></div>
         <button class="big" id="musicBtn" type="button">Start listening</button>
         <label class="field"><span>Audio source</span><select id="musicSource" class="text"><option value="auto">Auto · prefer Device Audio</option><option value="device">Device Audio</option><option value="microphone">Microphone</option></select></label>
-        <p class="hint" id="musicNotice" role="status">Device Audio requires Android 10+, native app 1.2.0 and Android capture consent. Some apps prohibit capture. Microphone fallback is always your choice.</p>
+        <p class="hint" id="musicNotice" role="status">Device Audio requires Android 10+, native app 1.2.1 and Android capture consent. Some apps prohibit capture. Microphone fallback is always your choice.</p>
         <button id="musicFallback" class="btn ghost block" type="button" hidden>Use microphone instead</button>
         <div class="musicInfo"><span id="musicActiveSource">Not capturing</span><span id="musicConnection">Bluetooth disconnected</span></div>
         <canvas id="musicSpectrum" width="320" height="72" aria-label="Live analyzed audio spectrum"></canvas>
@@ -177,7 +177,7 @@
 
       <button class="aboutCard" type="button" id="aboutVersion" aria-label="About MELK Studio">
         <b>MELK Studio</b>
-        <span id="aboutText">Version 1.2.0</span>
+        <span id="aboutText">Version 1.2.1</span>
         <small id="aboutHint">Independent app. Not affiliated with any LED strip maker.</small>
       </button>
     </section>
@@ -337,7 +337,7 @@
       <div class="btnRow"><button class="btn main" id="otaCheck" type="button">Check for updates</button><button class="btn ghost" id="otaInstall" type="button" hidden>Download &amp; install</button></div>
       <details class="fine"><summary>Version and server</summary>
         <div class="kvlist">
-          <div class="kv"><span>App version</span><strong id="otaVersion">v1.2.0</strong></div>
+          <div class="kv"><span>App version</span><strong id="otaVersion">v1.2.1</strong></div>
           <div class="kv"><span>Updater</span><strong id="otaCapability">Checking…</strong></div>
           <div class="kv"><span>Update server</span><strong id="otaHost">…</strong></div>
         </div>

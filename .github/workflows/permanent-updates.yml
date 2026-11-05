@@ -1,0 +1,131 @@
+name: Permanent APK updater validation and staging
+
+on:
+  push:
+    branches: [fix/permanent-in-app-updates]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [validate, prepare]
+        default: validate
+        description: Validate with CI-only key, or prepare with enrolled permanent secrets
+      installed_cert:
+        description: Complete CURRENT installed certificate SHA-256
+        required: true
+        default: '95cfeb6e1c3d69a42eda77e468480f129f611d393d51eb191af881c9f7291081'
+      installed_code:
+        description: Current installed versionCode
+        required: true
+        default: '10200'
+      migration_staging:
+        type: boolean
+        default: false
+        description: Explicitly quarantine a candidate that requires one-time signing migration
+
+# This workflow cannot create releases, push main or write the OTA repository.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event_name == 'push' || inputs.mode == 'validate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: npm ci && npm test && npm run test:tools && npx cap sync android
+      - name: Build two releases with ONE CI-only key; verify compatibility and mismatch blocking
+        run: python3 tools/updater-ci-smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CI-ONLY-updater-evidence-${{ github.run_id }}
+          path: |
+            updater-ci-evidence/
+            android/app/build/reports/
+            android/app/build/test-results/
+            android/host-tests/build/test-results/
+  browser:
+    if: github.event_name == 'push' || inputs.mode == 'validate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MELK_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: npm run build:preview && npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: updater-browser-${{ github.run_id }}
+          path: tests/e2e/out/
+  prepare:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'prepare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: npm ci && npm test && npm run test:tools && npx cap sync android
+      - name: Check permanent secrets and pinned certificate
+        env:
+          MELK_KEYSTORE_BASE64: ${{ secrets.MELK_KEYSTORE_BASE64 }}
+          MELK_STORE_PASSWORD: ${{ secrets.MELK_STORE_PASSWORD }}
+          MELK_KEY_ALIAS: ${{ secrets.MELK_KEY_ALIAS }}
+          MELK_KEY_PASSWORD: ${{ secrets.MELK_KEY_PASSWORD }}
+          MELK_RELEASE_CERT_SHA256: ${{ vars.MELK_RELEASE_CERT_SHA256 }}
+        run: python3 tools/signing-material.py --directory "$RUNNER_TEMP/melk-permanent-key"
+      - run: bash android/gradlew -p android :app:assembleRelease :app:lintRelease :app:testDebugUnitTest :host-tests:test --no-daemon
+      - name: Stage actual APK metadata; refuse incompatible ordinary updates
+        env:
+          CERT_PIN: ${{ vars.MELK_RELEASE_CERT_SHA256 }}
+          INSTALLED_CERT: ${{ inputs.installed_cert }}
+          INSTALLED_CODE: ${{ inputs.installed_code }}
+          MIGRATION: ${{ inputs.migration_staging }}
+        run: |
+          flags=()
+          if [[ "$MIGRATION" == true ]]; then flags+=(--allow-migration-staging); fi
+          python3 tools/stage-apk-release.py android/app/build/outputs/apk/release/app-release.apk --pin "$CERT_PIN" --installed-cert "$INSTALLED_CERT" --installed-code "$INSTALLED_CODE" "${flags[@]}"
+          python3 tools/make-ota.py 1.2.1 https://muhammadusamataj.github.io/melk-studio-ota-/ota/ --min-native-code 10107
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UNPUBLISHED-review-before-release-${{ github.run_id }}
+          path: |
+            release-stage/
+            ota-out/
+          retention-days: 30
+      - name: Remove private signing files
+        if: always()
+        run: |
+          rm -f android/keystore.properties
+          rm -rf "$RUNNER_TEMP/melk-permanent-key"

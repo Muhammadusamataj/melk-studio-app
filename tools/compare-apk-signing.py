@@ -19,10 +19,10 @@ def decide(old, new):
     oc, nc = {s['sha256'] for s in old['signers']}, {s['sha256'] for s in new['signers']}
     if not nc: reasons.append('candidate is not signed')
     elif not oc: reasons.append('installed APK has no readable signature')
-    elif not (oc & nc): reasons.append('DIFFERENT SIGNING KEY: Android will refuse to install it over the existing app')
-    if new.get('verified') is False: reasons.append('candidate signature does NOT verify (apksigner)')
-    if old.get('verified') is False: reasons.append('installed APK signature does NOT verify (apksigner)')
-    return not reasons, reasons, {'sameKey': bool(oc & nc), 'oldCerts': sorted(oc), 'newCerts': sorted(nc)}
+    elif oc != nc: reasons.append('DIFFERENT SIGNING KEY: this client requires identical current signing certificates')
+    if new.get('verified') is not True: reasons.append('candidate signature is not cryptographically verified (apksigner)')
+    if old.get('verified') is not True: reasons.append('installed APK signature is not cryptographically verified (apksigner)')
+    return not reasons, reasons, {'sameKey': bool(oc) and oc == nc, 'oldCerts': sorted(oc), 'newCerts': sorted(nc)}
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0]); ap.add_argument('installed'); ap.add_argument('candidate'); ap.add_argument('--json', action='store_true')

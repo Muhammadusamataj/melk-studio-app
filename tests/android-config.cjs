@@ -18,7 +18,7 @@ test('package id and namespace are unchanged', () => {
   assert.match(manifest, /android:name="\.MainActivity"/);
 });
 test('versionCode went up from 10106 and versionName matches the web version', () => {
-  const code = Number(/versionCode\s+(\d+)/.exec(gradle)[1]); const name = /versionName\s+"([^"]+)"/.exec(gradle)[1];
+  const code = Number(/def buildCode = .*?\?: '(\d+)'/.exec(gradle)[1]); const name = /def buildName = .*?\?: '([^']+)'/.exec(gradle)[1];
   assert.ok(code > 10106, 'versionCode ' + code); assert.equal(name, webVersion);
   assert.equal(JSON.parse(R('package.json')).version, webVersion);
   const [a, b, c] = name.split('.').map(Number); assert.equal(code, 10000 + b * 100 + c, 'versionCode follows 10000 + minor*100 + patch');

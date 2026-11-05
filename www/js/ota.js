@@ -1,7 +1,7 @@
 /* MELK Studio self-hosted OTA. No Bluetooth code is changed here. */
 (function(g) {
   'use strict';
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.2.1';
   const DEFAULT_URL = 'https://muhammadusamataj.github.io/melk-studio-ota-/ota/melk-version.json';
   const KEY_URL = 'melk.ota.url', KEY_PIN = 'melk.admin', KEY_FAIL = 'melk.admin.fail';
   const store = {
@@ -37,6 +37,16 @@
     }
     catch (_) { return APP_VERSION; }
   }
+  async function compatible(info) {
+    const minimum = info.minNativeVersionCode;
+    if (minimum === undefined) return true; // backwards-compatible web-only manifests remain supported
+    if (!Number.isInteger(minimum) || minimum < 1 || minimum > 2147483647) throw new Error('Invalid minimum native version');
+    const apk = native && g.Capacitor.Plugins && g.Capacitor.Plugins.ApkUpdater;
+    if (!apk || typeof apk.getInfo !== 'function') throw new Error('Install a compatible Android APK before this web update (build ' + minimum + '+).');
+    const installed = await apk.getInfo();
+    if (!Number.isInteger(installed.versionCode) || installed.versionCode < minimum) throw new Error('This web update needs Android app build ' + minimum + '+. Update the APK first.');
+    return true;
+  }
   async function check(manual) {
     if (busy) return;
     setBusy(true);
@@ -67,6 +77,7 @@
         new URL(info.url).origin !== new URL(activeUrl()).origin) throw new Error('Invalid update manifest');
       const current=await runningVersion();
       if (!newer(current,info.version)) { status('Up to date (v'+current+'). Server has v'+info.version+' at '+new URL(activeUrl()).host+'.'); return; }
+      await compatible(info);
       available=info;
       if (!updater) { status('v'+info.version+' is available, but this APK has no native OTA updater. Rebuild/install an OTA-enabled APK once.'); return; }
       status('New web update v'+info.version+' available. Install only when you are not controlling the strip.');
@@ -77,6 +88,7 @@
   async function install() {
     if (!updater || !available || busy) return;
     const info=available;
+    try { await compatible(info); } catch (e) { status(e.message); return; }
     if (!g.confirm('Download MELK Studio v'+info.version+'? Apply after restarting the app.')) return;
     setBusy(true);
     const progress=el('otaProgress');

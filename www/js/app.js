@@ -1034,7 +1034,7 @@
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPageId && !$('#dlg').open && $('#car').hidden) closePage(false); });
 
-  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0';
+  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.1';
   $('#aboutText').textContent = 'Version ' + APP_VER;
   let aboutTaps = 0, aboutAt = 0;
   function refreshDev() {
@@ -1259,7 +1259,7 @@
   }
   function renderNavSubs() {
     const v = $('#navVehicleSub'); if (v) v.textContent = veh().name + ' · ' + (S.driveMode === 'driving' ? 'Driving' : 'Parked');
-    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0');
+    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.1');
   }
 
   /* ---------- Scene DNA: share and import ---------- */

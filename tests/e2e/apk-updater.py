@@ -128,7 +128,13 @@ async def main():
         pg, errs = await new_page(b); await js(pg, "window.__apk.manifest.versionCode = 10107"); await to_updates(pg); await pg.click('#apkCheck'); await pg.wait_for_timeout(300)
         check('same or older build: "up to date"', 'up to date (build 10107)' in await status(pg) and not await vis(pg, '#apkDownload'))
         pg, errs = await new_page(b); await js(pg, "window.__apk.httpFail = 'Server answered 404'"); await to_updates(pg); await pg.click('#apkCheck'); await pg.wait_for_timeout(300)
-        check('an unreachable manifest is a readable error', 'Could not check for an app update' in await status(pg) and '404' in await status(pg))
+        check('missing release feed explains that no APK is published, without claiming up to date', 'No full-app update has been published' in await status(pg) and not await vis(pg, '#apkDownload'))
+
+        # Signing incompatibility is visible before any transfer, without an uninstall action.
+        pg, errs = await new_page(b); await js(pg, "window.__apk.manifest.signingCertSha256 = 'a'.repeat(64)"); await to_updates(pg); await pg.click('#apkCheck'); await pg.wait_for_timeout(300)
+        check('different manifest signer blocks download and explains backup/migration', 'cannot update this installation in place' in await status(pg) and not await vis(pg, '#apkDownload') and not any(c[0] == 'download' for c in await js(pg, 'window.__apk.calls')))
+        pg, errs = await new_page(b); await js(pg, "window.__apk.manifest.signingCertSha256 = window.__apk.info.signingSha256[0]"); await to_updates(pg); await pg.click('#apkCheck'); await pg.wait_for_timeout(300)
+        check('same signer allows the normal update flow', await vis(pg, '#apkDownload'))
 
         # ---- 6. after the app was replaced
         pg, errs = await new_page(b, storage={'melk.apk.pending': json.dumps({'code': 10108, 'name': '1.1.8'})},
