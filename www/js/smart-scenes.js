@@ -43,7 +43,7 @@
         if (accepted === false) { stop(); return; }
         current = id; next = choose(current); changed();
         timer = schedule(() => tick(my), prefs.interval);
-      } catch (_) { stop(); }
+      } catch (error) { if (my === generation) { stop(); if (env.onError) env.onError(error); } }
     }
     function start() {
       stop(); if (!env.canRun() || !prefs.selected.length) return false;

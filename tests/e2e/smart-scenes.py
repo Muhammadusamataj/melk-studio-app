@@ -48,7 +48,7 @@ async def main():
         assert await page.locator('#rotationScenes input').count() == 28
         await page.select_option('#rotationInterval','30000')
         await page.click('#rotationStart'); await page.wait_for_timeout(200)
-        assert 'Rotating' in await page.inner_text('#rotationStatus'), await page.inner_text('#rotationStatus')
+        assert 'Rotating' in await page.inner_text('#rotationStatus'), await page.evaluate("({status:document.getElementById('rotationStatus').textContent, hidden:document.hidden, connection:document.getElementById('connLabel').textContent, toast:document.getElementById('toast').textContent, state:JSON.parse(localStorage.getItem('melk.studio.v1')), writes:__w})")
         await page.screenshot(path=str(OUT/'rotation.png'),full_page=True)
         await page.click('#rotationStop')
         assert 'Stopped' in await page.inner_text('#rotationStatus')

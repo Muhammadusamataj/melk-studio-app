@@ -1643,6 +1643,7 @@
   }
   S.smartScenes = Melk.smartScenes.preferences(S.smartScenes);
   rotation = Melk.smartScenes.create({ preferences: S.smartScenes,
+    onError: error => { $('#rotationStatus').textContent = 'Rotation stopped: ' + (error.message || 'Scene command failed.'); },
     canRun: () => link.ready && !document.hidden && S.driveMode !== 'driving',
     send: id => { rotationSending = true; try { return sendNativeScene(id); } finally { rotationSending = false; } },
     onChange: status => { const el = $('#rotationStatus'); if (el) el.textContent = status.running ? 'Rotating · Last requested: ' + (P.NATIVE_SCENES[status.current] || 'starting') + ' · Next: ' + (P.NATIVE_SCENES[status.next] || '—') : 'Stopped. The last native scene is left on the controller.'; const b = $('#rotationStart'); if (b) b.textContent = status.running ? 'Restart rotation' : 'Start rotation'; const quick = $('#scenes button'); if (quick) quick.textContent = status.running ? 'Auto · Running' : 'Auto'; }

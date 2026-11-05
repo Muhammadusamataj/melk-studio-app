@@ -44,7 +44,8 @@ public class SmartAudioService extends Service {
             Notification notification = builder.setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("MELK Studio music sync")
                 .setContentText("device".equals(source) ? "Capturing permitted device audio locally" : "Microphone is active · audio stays on this phone")
                 .setContentIntent(open).setOngoing(true).addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause, "Stop", action).build()).build();
-            if (Build.VERSION.SDK_INT >= 30 || (Build.VERSION.SDK_INT >= 29 && "device".equals(source))) startForeground(42, notification, "device".equals(source) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION : ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+            if (Build.VERSION.SDK_INT >= 30) startForeground(42, notification, "device".equals(source) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION : ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+            else if (Build.VERSION.SDK_INT >= 29 && "device".equals(source)) startForeground(42, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
             else startForeground(42, notification);
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) throw new SecurityException("Audio permission is required");
             AudioFormat format = new AudioFormat.Builder().setSampleRate(AudioAnalysis.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_IN_MONO).build();
