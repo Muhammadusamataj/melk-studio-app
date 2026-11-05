@@ -50,6 +50,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // The downloader's loopback HTTP server uses JDK-only APIs, so its unchanged
+    // integration tests run in :host-tests rather than Android's reduced JDK image.
+    sourceSets { test.java.exclude '**/ApkDownloaderTest.java' }
 }
 
 repositories {

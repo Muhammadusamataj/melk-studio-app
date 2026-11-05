@@ -565,7 +565,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
 
       <button class="aboutCard" type="button" id="aboutVersion" aria-label="About MELK Studio">
         <b>MELK Studio</b>
-        <span id="aboutText">Version 1.1.7</span>
+        <span id="aboutText">Version 1.2.0</span>
         <small id="aboutHint">Independent app. Not affiliated with any LED strip maker.</small>
       </button>
     </section>
@@ -725,7 +725,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
       <div class="btnRow"><button class="btn main" id="otaCheck" type="button">Check for updates</button><button class="btn ghost" id="otaInstall" type="button" hidden>Download &amp; install</button></div>
       <details class="fine"><summary>Version and server</summary>
         <div class="kvlist">
-          <div class="kv"><span>App version</span><strong id="otaVersion">v1.1.7</strong></div>
+          <div class="kv"><span>App version</span><strong id="otaVersion">v1.2.0</strong></div>
           <div class="kv"><span>Updater</span><strong id="otaCapability">Checking…</strong></div>
           <div class="kv"><span>Update server</span><strong id="otaHost">…</strong></div>
         </div>
@@ -3458,7 +3458,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPageId && !$('#dlg').open && $('#car').hidden) closePage(false); });
 
-  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7';
+  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0';
   $('#aboutText').textContent = 'Version ' + APP_VER;
   let aboutTaps = 0, aboutAt = 0;
   function refreshDev() {
@@ -3667,7 +3667,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
         '<button type="button" class="lnk" aria-label="Copy shortcut link for ' + esc(sc.name) + '">Link</button>' +
         '<button type="button" class="map" aria-label="Map ' + esc(sc.name) + ' to a hardware mode">Hardware</button>' +
         '<button type="button" class="del" aria-label="Delete ' + esc(sc.name) + '">Delete</button></div></details>';
-      const play = document.createElement('button'); play.type = 'button'; play.className = 'btn ghost customPlay'; play.textContent = 'Play custom scene'; play.addEventListener('click', () => { S.auto = false; applyScene(sc); }); r.querySelector('.srTop').appendChild(play);
+      const play = document.createElement('button'); play.type = 'button'; play.className = 'btn ghost customPlay'; play.textContent = 'Play ' + sc.name; play.setAttribute('aria-label', 'Play saved scene ' + sc.name); play.addEventListener('click', () => { S.auto = false; applyScene(sc); }); r.querySelector('.srTop').after(play);
       r.querySelector('.fav').addEventListener('click', () => toggleFav(sc.id));
       r.querySelector('.share').addEventListener('click', () => shareScene(sc));
       r.querySelector('.map').addEventListener('click', () => mapSceneHardware(sc));
@@ -3683,7 +3683,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
   }
   function renderNavSubs() {
     const v = $('#navVehicleSub'); if (v) v.textContent = veh().name + ' · ' + (S.driveMode === 'driving' ? 'Driving' : 'Parked');
-    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7');
+    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0');
   }
 
   /* ---------- Scene DNA: share and import ---------- */

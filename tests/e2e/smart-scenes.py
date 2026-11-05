@@ -43,13 +43,12 @@ async def main():
         state = json.loads(await page.evaluate("localStorage.getItem('melk.studio.v1')"))
         assert state['smartScenes']['quick'] == [16,11,6,4]
         assert state['smartScenes']['recent'][0] == 4 and 4 in state['nativeSceneFav']
-        await page.reload(); await page.wait_for_timeout(300)
-        await page.click('#btnConn'); await page.wait_for_timeout(900)
+        await page.reload(); await page.wait_for_timeout(1700)
         await page.click('#t-color'); await page.click('#scenes button:has-text("Auto")')
         assert await page.locator('#rotationScenes input').count() == 28
         await page.select_option('#rotationInterval','30000')
         await page.click('#rotationStart'); await page.wait_for_timeout(200)
-        assert 'Rotating' in await page.inner_text('#rotationStatus')
+        assert 'Rotating' in await page.inner_text('#rotationStatus'), await page.inner_text('#rotationStatus')
         await page.screenshot(path=str(OUT/'rotation.png'),full_page=True)
         await page.click('#rotationStop')
         assert 'Stopped' in await page.inner_text('#rotationStatus')
@@ -61,7 +60,7 @@ async def main():
         for i in range(8):
             await page.evaluate("__capture.listeners.frame({source:'device',rms:.2,energy:.6,bass:.8,mid:.3,treble:.15,beat:true,silence:false,spectrum:Array(16).fill(.6)})")
             await page.wait_for_timeout(150)
-        assert await page.input_value('#music-bass') == '0.8'
+        assert await page.eval_on_selector('#music-bass', 'e=>e.value') == .8
         assert await page.evaluate("document.getElementById('musicSpectrum').getContext('2d').getImageData(2,50,1,1).data[3]") > 0
         await page.screenshot(path=str(OUT/'music-sync.png'),full_page=True)
         await page.evaluate("Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'))")

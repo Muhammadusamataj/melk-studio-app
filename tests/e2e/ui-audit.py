@@ -100,7 +100,7 @@ async def main():
                     await pg.evaluate("document.querySelectorAll('#sceneList .srMore').forEach(d=>d.open=true)")
                 await audit('page: ' + pid, '#page-' + pid)
                 await pg.click(f'#page-{pid} [data-back]')
-            await pg.click('#btnCar'); await audit('car parked', '#car'); await pg.click('#carDriving'); await audit('car driving', '#car'); await pg.click('#carExit')
+            await pg.click('#btnCar'); await audit('car parked', '#car'); await pg.click('#carDriving'); await audit('car driving', '#car'); await pg.click('#carParked'); await pg.click('#carExit')
             await pg.click('#t-settings'); await pg.click('#tab-settings [data-open=scenes]'); await pg.click('#sceneSave'); await audit('dialog: save scene', '#dlg'); await pg.keyboard.press('Escape')
             await pg.click('#sceneImport'); await audit('dialog: import scene', '#dlg'); await pg.keyboard.press('Escape')
             if errs: total.append((w, 'console', errs))

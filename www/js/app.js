@@ -1034,7 +1034,7 @@
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPageId && !$('#dlg').open && $('#car').hidden) closePage(false); });
 
-  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7';
+  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0';
   $('#aboutText').textContent = 'Version ' + APP_VER;
   let aboutTaps = 0, aboutAt = 0;
   function refreshDev() {
@@ -1243,7 +1243,7 @@
         '<button type="button" class="lnk" aria-label="Copy shortcut link for ' + esc(sc.name) + '">Link</button>' +
         '<button type="button" class="map" aria-label="Map ' + esc(sc.name) + ' to a hardware mode">Hardware</button>' +
         '<button type="button" class="del" aria-label="Delete ' + esc(sc.name) + '">Delete</button></div></details>';
-      const play = document.createElement('button'); play.type = 'button'; play.className = 'btn ghost customPlay'; play.textContent = 'Play custom scene'; play.addEventListener('click', () => { S.auto = false; applyScene(sc); }); r.querySelector('.srTop').appendChild(play);
+      const play = document.createElement('button'); play.type = 'button'; play.className = 'btn ghost customPlay'; play.textContent = 'Play ' + sc.name; play.setAttribute('aria-label', 'Play saved scene ' + sc.name); play.addEventListener('click', () => { S.auto = false; applyScene(sc); }); r.querySelector('.srTop').after(play);
       r.querySelector('.fav').addEventListener('click', () => toggleFav(sc.id));
       r.querySelector('.share').addEventListener('click', () => shareScene(sc));
       r.querySelector('.map').addEventListener('click', () => mapSceneHardware(sc));
@@ -1259,7 +1259,7 @@
   }
   function renderNavSubs() {
     const v = $('#navVehicleSub'); if (v) v.textContent = veh().name + ' · ' + (S.driveMode === 'driving' ? 'Driving' : 'Parked');
-    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7');
+    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0');
   }
 
   /* ---------- Scene DNA: share and import ---------- */

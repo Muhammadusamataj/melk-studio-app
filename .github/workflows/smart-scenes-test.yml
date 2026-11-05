@@ -31,7 +31,7 @@ jobs:
       - run: npm test && npm run test:tools
       - run: npx cap sync android
       - name: Compile, unit test and lint
-        run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-daemon
+        run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :host-tests:test :app:lintDebug --no-daemon
       - name: Verify actual APK metadata and signature
         run: python3 tools/verify-test-apk.py
       - name: Prepare unpublished compatible web bundle
@@ -56,6 +56,8 @@ jobs:
           path: |
             android/app/build/reports/
             android/app/build/test-results/
+            android/host-tests/build/reports/
+            android/host-tests/build/test-results/
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 20
