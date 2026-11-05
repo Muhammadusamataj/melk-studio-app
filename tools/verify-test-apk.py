@@ -8,6 +8,12 @@ import apkinfo
 
 source = pathlib.Path('android/app/build/outputs/apk/debug/app-debug.apk')
 info = apkinfo.read_apk(source)
+print(json.dumps(info, indent=2), flush=True)
+signer_tool = apkinfo.find_tool('apksigner')
+if signer_tool:
+    verify_code, verify_report = apkinfo.run([signer_tool, 'verify', '--verbose', '--print-certs', str(source)])
+    print(verify_report, flush=True)
+    assert verify_code == 0, 'apksigner verification returned a failure'
 assert info['verified'] is True, 'APK signature verification failed'
 assert info['package'] == 'com.bleled.com', info['package']
 assert info['versionName'] == '1.2.0' and info['versionCode'] == 10200, 'Wrong APK version'
