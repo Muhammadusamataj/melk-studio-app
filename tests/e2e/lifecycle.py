@@ -3,6 +3,7 @@
 Run from the project root:  pip install playwright && playwright install chromium && python3 tests/e2e/lifecycle.py
 These checks use a MOCK. They prove the app's behaviour, not that a real LED strip executed anything."""
 import asyncio, pathlib, sys
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -44,7 +45,7 @@ async def close_page(pg, pid):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # 1. Hardware scene is not overwritten by a reconnect
         pg, errs = await fresh(b); await connect(pg)

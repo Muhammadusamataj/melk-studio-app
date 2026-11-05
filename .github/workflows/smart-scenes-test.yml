@@ -68,6 +68,8 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      MELK_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,7 +79,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install playwright
-      - run: python3 -m playwright install --with-deps chromium
+      - name: Verify preinstalled Chrome
+        run: google-chrome --version
       - run: npm run build:preview
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

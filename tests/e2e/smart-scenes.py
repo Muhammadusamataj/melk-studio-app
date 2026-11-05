@@ -2,6 +2,7 @@
 import asyncio
 import json
 import pathlib
+import os
 from playwright.async_api import async_playwright
 from apk_mock import APK_MOCK
 
@@ -20,7 +21,7 @@ window.Capacitor.Plugins.SmartAudio={
 
 async def main():
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         context = await browser.new_context(viewport={'width':390,'height':844})
         page = await context.new_page()
         errors = []

@@ -2,6 +2,7 @@
 """End-to-end checks for the redesigned interface and the new features (mocked Bluetooth and audio plugins).
 Run from the project root:  python3 tests/e2e/features.py"""
 import asyncio, json, pathlib, sys
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -48,7 +49,7 @@ async def unlock_dev(pg):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---------- A. structure and navigation ----------
         pg, errs = await fresh(b, connect=False)

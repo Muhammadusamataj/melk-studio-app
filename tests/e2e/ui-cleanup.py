@@ -5,6 +5,7 @@ Run from the project root: python3 tests/e2e/ui-cleanup.py"""
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 URL = (ROOT / 'www' / 'index.html').as_uri()
@@ -31,7 +32,7 @@ async def conn_view(pg):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---- power hierarchy
         pg, errs = await new_page(b)

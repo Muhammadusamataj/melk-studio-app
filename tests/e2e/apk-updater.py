@@ -5,6 +5,7 @@ All Android calls are mocked (tests/e2e/apk_mock.py). Run from the project root:
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -37,7 +38,7 @@ async def prepare_ready(pg):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---- 1. two separate options
         pg, errs = await new_page(b); await to_updates(pg)

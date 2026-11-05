@@ -4,6 +4,7 @@ Run from the project root: python3 tests/e2e/effects-browser.py"""
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 URL = (ROOT / 'www' / 'index.html').as_uri()
@@ -36,7 +37,7 @@ def pkt_scene(i): return '7e0531%02x07ffff01ef' % i
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---------- structure ----------
         pg, errs = await new_page(b)
@@ -169,7 +170,7 @@ async def main():
         check('Enter on Run on strip runs the selected effect', any(w.startswith('7e0503') for w in await writes(pg)))
 
         # ---------- guards ----------
-        await b.close(); b = await p.chromium.launch()
+        await b.close(); b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         pg, errs2 = await new_page(b, connect=False); await clear(pg); await pg.click('#fxRun'); await pg.wait_for_timeout(300)
         check('not connected: Run says so, sends nothing and marks nothing as sent', 'Connect the strip first' in await toast(pg) and await writes(pg) == [] and await pg.locator('.mk.sent').count() == 0)
         pg, errs3 = await new_page(b, storage={'driveMode': 'driving'}); await clear(pg); await pg.wait_for_timeout(300)

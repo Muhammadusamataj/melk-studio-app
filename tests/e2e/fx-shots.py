@@ -5,12 +5,13 @@
 import argparse, asyncio, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 ap = argparse.ArgumentParser(); ap.add_argument('--root', required=True); ap.add_argument('--out', required=True); ap.add_argument('--states', action='store_true'); a = ap.parse_args()
 URL = (pathlib.Path(a.root) / 'www' / 'index.html').as_uri(); OUT = pathlib.Path(a.out); OUT.mkdir(parents=True, exist_ok=True)
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         for w, h in [(320, 700), (390, 800), (768, 1000)]:
             ctx = await b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1.5); pg = await ctx.new_page()
             await pg.add_init_script(APK_MOCK); await pg.goto(URL); await pg.wait_for_timeout(400)

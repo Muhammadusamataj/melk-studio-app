@@ -7,6 +7,7 @@ Run from the project root:  python3 tests/e2e/ui-audit.py"""
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -67,7 +68,7 @@ AUDIT = """
 total = []
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         for (w, h) in SIZES:
             ctx = await b.new_context(viewport={'width': w, 'height': h}); pg = await ctx.new_page()
             errs = []; pg.on('pageerror', lambda e: errs.append('PAGEERR ' + str(e))); pg.on('console', lambda m: errs.append('CONSOLE ' + m.text) if m.type == 'error' else None)
