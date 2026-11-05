@@ -43,7 +43,8 @@ async def main():
         state = json.loads(await page.evaluate("localStorage.getItem('melk.studio.v1')"))
         assert state['smartScenes']['quick'] == [16,11,6,4]
         assert state['smartScenes']['recent'][0] == 4 and 4 in state['nativeSceneFav']
-        await page.reload(); await page.wait_for_timeout(1700)
+        await page.reload()
+        await page.wait_for_selector('#connPageCard[data-s="connected"]', state='attached')
         await page.click('#t-color'); await page.click('#scenes button:has-text("Auto")')
         assert await page.locator('#rotationScenes input').count() == 28
         await page.select_option('#rotationInterval','30000')
