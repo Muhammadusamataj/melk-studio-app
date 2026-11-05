@@ -80,7 +80,8 @@ jobs:
           name: updater-browser-${{ github.run_id }}
           path: tests/e2e/out/
   prepare:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'prepare'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'prepare' && github.ref == 'refs/heads/main'
+    environment: release-signing
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

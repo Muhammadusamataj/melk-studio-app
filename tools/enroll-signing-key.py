@@ -4,12 +4,20 @@ import argparse
 import base64
 import getpass
 import hashlib
+import json
 import os
 import pathlib
 import subprocess
 import sys
 
 REPO='Muhammadusamataj/melk-studio-app'
+ENVIRONMENT='release-signing'
+
+def protected_environment(protection, branches):
+    reviewers=any(r.get('type')=='required_reviewers' and r.get('reviewers') for r in protection.get('protection_rules',[]))
+    policy=protection.get('deployment_branch_policy') or {}
+    return bool(reviewers and policy.get('custom_branch_policies') and len(branches)==1 and
+        branches[0].get('name')=='main' and branches[0].get('type','branch')=='branch')
 
 def quiet(command, data=None, env=None):
     r=subprocess.run(command,input=data,env=env,capture_output=True)
@@ -25,7 +33,14 @@ def main():
     if a.create and store.exists(): raise SystemExit('Refusing to replace an existing permanent identity. Use the existing key.')
     if not a.create and not store.is_file(): raise SystemExit('Existing keystore is missing. Never create a replacement casually.')
     # Probe authorization BEFORE generating a permanent key. No interactive token login or credential printing.
-    quiet(['gh','api',f'repos/{REPO}/actions/secrets/public-key'])
+    protection=json.loads(quiet(['gh','api',f'repos/{REPO}/environments/{ENVIRONMENT}']))
+    branches=json.loads(quiet(['gh','api',f'repos/{REPO}/environments/{ENVIRONMENT}/deployment-branch-policies'])).get('branch_policies',[])
+    if not protected_environment(protection,branches):
+        raise SystemExit('Configure release-signing with required reviewers and exactly the main branch, with no tag or wildcard policies.')
+    variables=json.loads(quiet(['gh','api',f'repos/{REPO}/environments/{ENVIRONMENT}/variables'])).get('variables',[])
+    existing_pin=next((v['value'].lower() for v in variables if v['name']=='MELK_RELEASE_CERT_SHA256'),None)
+    if existing_pin and a.create: raise SystemExit('A permanent signing identity is already enrolled. Reuse the ORIGINAL encrypted keystore; do not create a replacement.')
+    quiet(['gh','api',f'repos/{REPO}/environments/{ENVIRONMENT}/secrets/public-key'])
     password=getpass.getpass('Keystore password (keep in your password manager): ')
     if a.create and (len(password)<20 or password!=getpass.getpass('Confirm password: ')): raise SystemExit('Use matching passwords of at least 20 characters.')
     key_password=password if a.create else getpass.getpass('Private-key password: ')
@@ -37,10 +52,11 @@ def main():
     os.chmod(store,0o600)
     cert=quiet(['keytool','-exportcert','-keystore',str(store),'-alias',a.alias,'-storepass:env','MELK_STORE_PASSWORD'],env=env)
     pin=hashlib.sha256(cert).hexdigest()
+    if existing_pin and pin!=existing_pin: raise SystemExit('This key differs from the enrolled permanent identity. Enrollment refused; existing Secrets were not changed.')
     values={'MELK_KEYSTORE_BASE64':base64.b64encode(store.read_bytes()),'MELK_STORE_PASSWORD':password.encode(),
         'MELK_KEY_ALIAS':a.alias.encode(),'MELK_KEY_PASSWORD':key_password.encode()}
-    for name,value in values.items(): quiet(['gh','secret','set',name,'--repo',REPO],data=value)
-    quiet(['gh','variable','set','MELK_RELEASE_CERT_SHA256','--repo',REPO],data=pin.encode())
+    for name,value in values.items(): quiet(['gh','secret','set',name,'--repo',REPO,'--env',ENVIRONMENT],data=value)
+    quiet(['gh','variable','set','MELK_RELEASE_CERT_SHA256','--repo',REPO,'--env',ENVIRONMENT],data=pin.encode())
     print('Enrollment complete. Public certificate SHA-256: '+pin)
     print('Retain an encrypted offline backup of the keystore and keep its password in a separate password manager.')
     print('This sets up signing only. No APK or live manifest was published. Obtain identity/migration approval before distribution.')

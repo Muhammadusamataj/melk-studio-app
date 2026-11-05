@@ -1,6 +1,6 @@
 # App update (full APK) through Android's Package Installer
 
-Build 1.1.7 (versionCode 10107), package `com.bleled.com`. **Nothing here has been published.** It is separate from the ZIP web update.
+Updater introduced in build 1.1.7; current 1.2.1 candidate procedure is in [Permanent updates](PERMANENT_UPDATES.md). Package `com.bleled.com`. **Nothing here has been published.** It is separate from the ZIP web update.
 
 ## Two kinds of update
 | | Web update (existing) | App update (new) |
@@ -21,14 +21,15 @@ Neither touches the other's manifest. Use a web update when only the web layer c
 6. **After**: if you cancel in Android, the app notices when you return, says so, and reconnects the strip. If the update installs, the new app starts, says "updated to v...", deletes the downloaded file and reconnects the strip by itself.
 
 ## What blocks an install (`ApkRules`)
-Different package name, build number lower or equal to the installed one, not signed, **signing certificate not shared with the installed app**, the manifest describing a different package / build / signing key than the file, Android older than `minSdk`. All reasons are reported, not only the first.
+Different package name, build number lower or equal to the installed one, not signed, **CURRENT signing-certificate set different from the installed app**, the manifest describing a different package / build / signing key than the file, Android older than `minSdk`. All reasons are reported, not only the first.
 
 ## Failure handling
 | Situation | Result |
 |---|---|
 | Cancel | download stops, partial file deleted, "Download cancelled." |
 | No internet, connection dropped, timeout | clear message, partial file deleted, retry button |
-| HTTP error (404 etc.), redirect to http, bad address | refused with the server's status |
+| Missing manifest (404) | no APK release published yet; no up-to-date claim or download |
+| Other HTTP error, redirect to http, bad address | refused with the server's status |
 | Checksum or size mismatch | file deleted, "Nothing was installed." |
 | Not enough storage | checked before downloading (needs file size + 32 MB), and also if the disk fills while writing |
 | Wrong key / package / downgrade | blocked, reasons shown, file deleted |

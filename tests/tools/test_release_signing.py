@@ -14,6 +14,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[2]
 def load(name):
     s=importlib.util.spec_from_file_location(name,ROOT/'tools'/f'{name}.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 material=load('signing-material');stage=load('stage-apk-release')
+enrollment=load('enroll-signing-key')
 A='a'*64;B='b'*64
 
 class ReleaseSafety(unittest.TestCase):
@@ -51,5 +52,11 @@ class ReleaseSafety(unittest.TestCase):
             self.assertFalse(d.exists());self.assertFalse(props.exists())
     def test_java_properties_escape_password_metacharacters(self):
         self.assertEqual(material.property_value(' a=b:c\\d\ne'),r'\ a\=b\:c\\d\ne')
+    def test_enrollment_requires_reviewers_and_only_main_not_tags_or_wildcards(self):
+        policy={'deployment_branch_policy':{'custom_branch_policies':True},'protection_rules':[{'type':'required_reviewers','reviewers':[{'type':'User'}]}]}
+        self.assertTrue(enrollment.protected_environment(policy,[{'name':'main','type':'branch'}]))
+        self.assertFalse(enrollment.protected_environment({},[{'name':'main','type':'branch'}]))
+        for branches in [[],[{'name':'*','type':'branch'}],[{'name':'main','type':'tag'}],[{'name':'main'},{'name':'feature/*'}]]:
+            self.assertFalse(enrollment.protected_environment(policy,branches))
 
 if __name__=='__main__':unittest.main()

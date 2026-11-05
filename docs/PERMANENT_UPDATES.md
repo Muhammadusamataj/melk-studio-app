@@ -29,13 +29,13 @@ Version 1.2.1 / 10201 aligns native, web, npm and cache versions for this candid
 
 The connected GitHub tool has no Secrets-administration capability. The local `gh auth status` reports an invalid configured token. Therefore this session cannot securely install repository Secrets. The helper refuses to generate a key until owner Secrets access is available; do not send keys, passwords or tokens in chat.
 
-On a trusted owner machine with JDK 21 and GitHub CLI authenticated to this repository with repository Secrets/Variables write access:
+On a trusted owner machine with JDK 21 and GitHub CLI authenticated to this repository with Environment Secrets/Variables write access and environment read access:
 
-1. Keep the private keystore outside the checkout. Prefer an existing recoverable original key if available.
+1. In GitHub Settings → Environments, create `release-signing`, add at least one required reviewer, and allow exactly the `main` branch through a custom deployment branch rule (no tags/wildcards). The enrollment helper checks this protection before generating or uploading any key. Keep the private keystore outside the checkout. Prefer an existing recoverable original key if available.
 2. To enroll an existing key: `python3 tools/enroll-signing-key.py --keystore /secure/outside/repository/melk-release.p12 --alias YOUR_ALIAS`
 3. Only if no original key is recoverable and you accept that a migration will be required: `python3 tools/enroll-signing-key.py --keystore /secure/outside/repository/melk-release.p12 --create`
 4. Passwords are entered through hidden prompts, never command-line arguments. The new encrypted PKCS12 uses a 3072-bit RSA key, a 10,000-day certificate, owner-only file permissions and a password of at least 20 characters. Keep the password in a separate password manager. The alias and passwords are sent to `gh secret set` over stdin.
-5. The helper configures exactly four repository Secrets: `MELK_KEYSTORE_BASE64`, `MELK_STORE_PASSWORD`, `MELK_KEY_ALIAS`, `MELK_KEY_PASSWORD`. It sets the public repository Variable `MELK_RELEASE_CERT_SHA256` from the actual exported certificate. It never replaces an existing keystore when `--create` is used.
+5. The helper configures exactly four Secrets in the protected `release-signing` Environment: `MELK_KEYSTORE_BASE64`, `MELK_STORE_PASSWORD`, `MELK_KEY_ALIAS`, `MELK_KEY_PASSWORD`. It sets the public Environment Variable `MELK_RELEASE_CERT_SHA256` from the actual exported certificate. It never replaces an existing keystore when `--create` is used.
 6. Retain at least two encrypted offline backups in controlled locations and verify restoration with `keytool -exportcert`. Do not store the password alongside an unprotected key backup. GitHub Secrets are not a downloadable keystore backup.
 7. Return ONLY the public fingerprint for identity approval. Never delete the encrypted key after setup, generate a replacement for a routine release, or rotate the pin casually. On a partial upload failure, retry enrollment with the SAME existing file (without `--create`). Restrict repository workflow/Secrets administration to trusted maintainers.
 
@@ -46,7 +46,7 @@ No key/password is committed, printed or put in artifacts. Signing material exis
 `.github/workflows/permanent-updates.yml` has two distinct modes:
 
 - Automatic `validate`: JDK 21/SDK 36; JavaScript/Python tests; native tests/lint; all browser suites; two REAL non-debuggable APK builds with one temporary **CI-ONLY** key. The builds have increasing versionCodes, their real signatures are compared, and the generated manifests use actual APK metadata. A mismatch against the owner's installed test signer must be refused. CI-only APKs/private keys are excluded from artifacts. The evidence explicitly says production identity is not configured.
-- Manual `prepare`: requires the four enrolled Secrets and the public pin; verifies the keystore certificate BEFORE building; builds/tests/lints the release; checks actual APK signature/package/version/minSdk/debug flags; and stages an APK plus real metadata. No debug/unsigned fallback is possible. The job has contents:read only and no OTA credential or publication step.
+- Manual `prepare`: requires reviewer approval in the main-only `release-signing` Environment, the four enrolled Secrets and the public pin; verifies the keystore certificate BEFORE building; builds/tests/lints the release; checks actual APK signature/package/version/minSdk/debug flags; and stages an APK plus real metadata. No debug/unsigned fallback is possible. The job has contents:read only and no OTA credential or publication step.
 
 GitHub exposes workflow_dispatch through the default branch once the workflow is approved and present there. Validation runs now on the separate feature branch; owner production preparation will require the reviewed workflow on the default branch (or an explicitly authorized equivalent run). Neither PR #2 nor PR #3 is merged by this task. This updater PR is stacked on the v1.2.0 feature branch so its diff isolates updater work; retarget it to main after that base is merged through normal approval.
 
