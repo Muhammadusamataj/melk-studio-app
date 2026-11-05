@@ -21,8 +21,8 @@ android {
         applicationId "com.bleled.com"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10107
-        versionName "1.1.7"
+        versionCode 10200
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -50,6 +50,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // The downloader's loopback HTTP server uses JDK-only APIs, so its unchanged
+    // integration tests run in :host-tests rather than Android's reduced JDK image.
+    sourceSets { test.java.exclude '**/ApkDownloaderTest.java' }
 }
 
 repositories {

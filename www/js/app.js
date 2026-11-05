@@ -60,7 +60,7 @@
   const DEF = {
     on: true, h: 33, s: 0.72, br: 80, speed: 50, warm: 50,
     palette: ['#FFB347', '#FF4D6D', '#7C5CFF', '#2EC4B6', '#FFFFFF'],
-    flowSec: 60, modeNames: {}, modeHidden: {}, modeFav: {}, seqs: null, scenes: null, auto: false, carSeeded: false, nativeSeeded: false, nativeLast: null, native: null, verify: {}, lastFail: null, verifyMigrated: false, devUnlocked: false, driveMode: 'parked', vehicles: null, vehicleId: 'v1', favScenes: [], recent: [], fadeMs: 1500, sunDim: false, sunCap: 25, geo: null, sunState: 'day', dayBr: 80, showAll: false, tab: 'color', musicStyle: 'pulse', sens: 60, djInterval: 7, autoStyle: 'time', autoInterval: 45, preserveHardware: false, modePersistent: {'128':true}, persistentOnly: false, powerProfile: 'current', nativeTested: {}, beatGate: 55, beatCooldown: 360, beatCountView: 0, routines: [], routineEnabled: false, routineLast: {},
+    flowSec: 60, modeNames: {}, modeHidden: {}, modeFav: {}, seqs: null, scenes: null, auto: false, carSeeded: false, nativeSeeded: false, nativeLast: null, native: null, verify: {}, lastFail: null, verifyMigrated: false, devUnlocked: false, driveMode: 'parked', vehicles: null, vehicleId: 'v1', favScenes: [], recent: [], fadeMs: 1500, sunDim: false, sunCap: 25, geo: null, sunState: 'day', dayBr: 80, showAll: false, tab: 'color', musicStyle: 'smart', musicSource: 'auto', smartScenes: null, nativeSceneFav: [], djBank: [], sens: 60, djInterval: 7, autoStyle: 'time', autoInterval: 45, preserveHardware: false, modePersistent: {'128':true}, persistentOnly: false, powerProfile: 'current', nativeTested: {}, beatGate: 55, beatCooldown: 360, beatCountView: 0, routines: [], routineEnabled: false, routineLast: {},
   };
   let S;
   try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('melk.studio.v1') || '{}')); } catch (e) { S = Object.assign({}, DEF); }
@@ -106,6 +106,7 @@
     return nativeSend(bytes, key);
   };
   let activeMode = (S.native && S.native.kind === 'mode') ? S.native.id : null;
+  let rotation = null, rotationSending = false, musicSession = 0, musicBusy = false;
   let driver = null; // running custom effect or music
   let activeScene = null, curSeqId = null;
 
@@ -213,12 +214,18 @@
     toast(on ? 'Power ON command sent' : 'Power OFF command sent');
   }
   function stopDriver() {
+    musicSession++;
+    if (musicBusy && window.MelkSmartAudio) MelkSmartAudio.stop();
+    if (rotation && !rotationSending) rotation.stop();
     curSeqId = null; cancelFade();
     if (driver) { driver.stop(); driver = null; }
     $$('.card[data-seq]').forEach((c) => c.querySelector('[data-play]').textContent = 'Play');
     $('#flowBtn').textContent = 'Start';
     const mb = $('#musicBtn'); mb.setAttribute('aria-pressed', 'false'); mb.textContent = 'Start listening';
     $('#meter').style.width = '0';
+    if ($('#musicSpectrum')) $('#musicSpectrum').getContext('2d').clearRect(0, 0, 320, 72);
+    for (const band of ['bass', 'mid', 'treble']) if ($('#music-' + band)) $('#music-' + band).value = 0;
+    if ($('#musicActiveSource')) $('#musicActiveSource').textContent = 'Not capturing';
   }
   function setColor(h, s, fromUser) {
     if (fromUser) { stopDriver(); activeMode = null; activeScene = null; renderModes(); renderScenes(); }
@@ -308,15 +315,10 @@
   S.persistentOnly = !!S.persistentOnly;
   // View state only (never saved): the chip that is showing, the search text, and which row is selected. "Selected" is not "playing".
   let fxCat = null, fxQuery = '', fxSelKey = null;
-  const fxState = () => ({ names: S.modeNames, fav: S.modeFav, hidden: S.modeHidden, persistent: S.modePersistent, verifyStatus: hwStatus });
+  const fxState = () => ({ sceneFav: S.nativeSceneFav || [], names: S.modeNames, fav: S.modeFav, hidden: S.modeHidden, persistent: S.modePersistent, verifyStatus: hwStatus });
   // The strip never confirms which effect it plays, so this is only "the last effect command this app sent".
   const fxSent = () => (S.native && (S.native.kind === 'mode' || S.native.kind === 'scene') ? (S.native.kind === 'mode' ? 'm' : 's') + S.native.id : null);
-  function fxInitialCat(modes) {
-    if (modes.some((e) => e.fav && !e.hidden)) return 'fav';
-    if (S.native && S.native.kind === 'scene') return 'scenes';
-    if (S.native && S.native.kind === 'mode' && P.isKnownMode(S.native.id)) return P.modeGroup(S.native.id);
-    return 'all';
-  }
+  function fxInitialCat() { return 'scenes'; }
   function fxEnsureVisible(list, row) {
     if (!row) return;
     const top = row.offsetTop, bottom = top + row.offsetHeight;
@@ -362,9 +364,9 @@
     $('#fxCount').textContent = total + (total === 1 ? ' effect' : ' effects');
     const grpLabel = (cats.find((c) => c.key === fxCat) || {}).label;
     $('#fxCatNote').textContent = (fxQuery ? total + (total === 1 ? ' match for “' : ' matches for “') + fxQuery.trim() + '” in every group.'
-      : fxCat === 'all' ? 'Every strip mode, in Magic Lantern’s groups.'
-      : fxCat === 'fav' ? 'Your favourite modes.'
-      : fxCat === 'scenes' ? 'Scenes built into the strip. Your saved scenes are in the row at the top and in Settings, Scenes.'
+      : fxCat === 'all' ? 'Every numbered mode and all 28 native hardware scenes.'
+      : fxCat === 'fav' ? 'Your favourite native modes and scenes.'
+      : fxCat === 'scenes' ? 'Native hardware scenes. Custom phone-driven scenes remain in Settings → Scenes.'
       : fxCat === 'hidden' ? 'Modes you hid. Select one and tap Rename to show it again.'
       : 'Magic Lantern’s “' + grpLabel + '” group.') + (S.persistentOnly ? ' Showing only effects you verified.' : '');
 
@@ -384,7 +386,7 @@
       : sentEntry.key === fxSelKey ? 'This is the last effect command sent to the strip. The strip does not confirm what it is playing.'
       : 'Last effect command sent: “' + sentEntry.name + '” (' + (sentEntry.kind === 'scene' ? 'scene ' : 'mode ') + sentEntry.id + '). The strip does not confirm what it is playing.';
     const isMode = !!sel && sel.kind === 'mode';
-    $('#fxRun').disabled = !sel; $('#fxFav').hidden = !isMode; $('#fxRename').hidden = !isMode; $('#fxSpeedRow').hidden = !isMode;
+    $('#fxRun').disabled = !sel; $('#fxFav').hidden = !sel; $('#fxQuick').hidden = !sel || isMode; $('#fxRename').hidden = !isMode; $('#fxSpeedRow').hidden = !isMode;
     $('#fxFav').setAttribute('aria-pressed', String(!!(sel && sel.fav))); $('#fxFav').textContent = (sel && sel.fav ? '★' : '☆') + ' Favourite';
     $('#persistentOnly').checked = !!S.persistentOnly;
 
@@ -434,7 +436,8 @@
     if (c.kind === 'scene') sendNativeScene(c.id); else runMode(c.id);
   });
   $('#fxFav').addEventListener('click', () => {
-    const c = fxCurrent(); if (!c || c.kind !== 'mode') return;
+    const c = fxCurrent(); if (!c) return;
+    if (c.kind === 'scene') { const fav = S.nativeSceneFav || []; S.nativeSceneFav = fav.includes(c.id) ? fav.filter(x => x !== c.id) : fav.concat(c.id); save(); renderModes(); return; }
     if (S.modeFav[c.id]) delete S.modeFav[c.id]; else S.modeFav[c.id] = 1;
     save(); renderModes();
   });
@@ -621,110 +624,63 @@
   $('#segMine').addEventListener('click', () => setSeg('mine'));
 
   /* ---------- music ---------- */
-  // Smooth audio envelope, beat-driven colour changes and BLE rate limiting.
-  const mus = { hue: S.h, avg: 0.05, fast: 0, slow: 0, env: 0.2, lastBeat: 0, lastTx: 0, lastHue: 0, lastRgb: null, lastDJ: 0, quiet: 0, beatCount: 0, mode: null };
-  function musicFrame(input) {
-    const bass = clamp(Number(input) || 0, 0, 1);
+  let musicPausedByHide = false;
+  let smartResponse = Melk.smartMusic.create(), silentFrames = 0, manualFast = 0, manualSlow = 0, manualBeatAt = -10000;
+  function musicFrame(f) {
+    if (!driver || driver.label !== 'Listening…') return;
     const now = performance.now();
-    const sensitivity = clamp(S.sens / 100, 0.05, 1);
-    // Adaptive onset envelope. Native AudioLevel supplies bass intensity only;
-    // this is onset detection, NOT full FFT or song BPM recognition.
-    const floor = 0.025 + (1 - sensitivity) * 0.08;
-    const energy = Math.max(0, bass - floor);
-    mus.fast += (energy - mus.fast) * 0.38;
-    mus.slow += (energy - mus.slow) * 0.035;
-    mus.avg += (energy - mus.avg) * 0.04;
-    const gate = 0.045 + (S.beatGate / 100) * 0.16;
-    const onset = mus.fast - mus.slow;
-    const beat = energy > gate && onset > 0.035 + (1 - sensitivity) * 0.022 &&
-      mus.fast > Math.max(0.055, mus.slow * 1.48) && now - mus.lastBeat > S.beatCooldown;
-    if (beat) { mus.lastBeat = now; mus.hue = (mus.hue + 47) % 360; mus.beatCount++; }
-    const beatLamp = $('#beatLamp');
-    if (beatLamp) beatLamp.textContent = beat ? '● BEAT ' + mus.beatCount : 'Beat count: ' + mus.beatCount;
-    // Built-in controller patterns run on the strip; changing each beat restarts them.
-    // Change no faster than the user-selected minimum interval, only on a strong beat.
-    if (S.musicStyle === 'dj') {
-      $('#meter').style.width = Math.round(clamp(energy * 220, 0, 100)) + '%';
-      if (!link.ready || !beat || now - mus.lastDJ < S.djInterval * 1000) return;
-      const favorites = Object.keys(S.modeFav).filter(k => S.modeFav[k] && P.isKnownMode(+k)).map(Number);
-      const pool = favorites.length ? favorites : Array.from({length: P.MODE_LAST - P.MODE_FIRST + 1}, (_,i) => P.MODE_FIRST + i);
-      const choices = pool.filter(x => x !== mus.mode);
-      const mode = (choices.length ? choices : pool)[Math.floor(Math.random() * (choices.length || pool.length))];
-      mus.mode = mode; mus.lastDJ = now;
-      S.lastHardwareMode = mode; // Persist the choice in app storage; hardware power-on persistence is controller-dependent.
-      setNative('mode', mode); link.cancel(['color']);
-      link.send(P.mode(mode), 'mode');
-      link.send(P.speed(S.speed), 'speed');
-      $('#djStatus').textContent = 'Playing ' + modeLabel(mode) + (favorites.length ? ' (favourites)' : '');
-      return;
-    }
-    const target = clamp(0.22 + energy * (1.2 + sensitivity), 0.22, 0.90);
-    mus.env += (target - mus.env) * (target > mus.env ? 0.20 : 0.055);
-    const spectrum = S.musicStyle === 'spectrum';
-    if (spectrum && now - mus.lastHue > 110) {
-      mus.hue = (mus.hue + 1.2) % 360;
-      mus.lastHue = now;
-    }
-    const rgb = spectrum ? hsv2rgb(mus.hue, 0.92, mus.env) : hsv2rgb(S.h, S.s, mus.env);
-    paint(rgb, mus.env);
-    $('#meter').style.width = Math.round(mus.env * 100) + '%';
-    if (now - mus.lastTx < 125) return;
-    if (mus.lastRgb && Math.max(...rgb.map((v,i) => Math.abs(v - mus.lastRgb[i]))) < 7) return;
-    mus.lastTx = now;
-    mus.lastRgb = rgb;
-    sendRGB(rgb);
+    if (f.legacy || S.musicStyle !== 'smart') { const energy = Number(f.bass) || 0; manualFast += (energy - manualFast) * .4; manualSlow += (energy - manualSlow) * .04; const beat = f.legacy ? manualFast - manualSlow > .035 : f.beat; f = { ...f, beat: !!beat && energy > .045 + S.beatGate / 100 * .16 && now - manualBeatAt > S.beatCooldown }; if (f.beat) manualBeatAt = now; }
+    $('#musicActiveSource').textContent = f.legacy ? 'Microphone · legacy level analysis' : f.source === 'device' ? 'Device Audio' : 'Microphone';
+    $('#musicConnection').textContent = link.state === 'connected' ? 'Bluetooth connected' : link.state === 'demo' ? 'Demo strip' : 'Bluetooth disconnected';
+    $('#beatLamp').textContent = f.beat ? '● Beat' : f.silence ? 'Silence · gently holding' : f.bpm && f.confidence >= .65 ? Math.round(f.bpm) + ' BPM (estimate)' : 'Listening';
+    for (const band of ['bass', 'mid', 'treble']) { const el = $('#music-' + band); el.value = Number(f[band]) || 0; el.setAttribute('aria-valuetext', f.legacy && band !== 'bass' ? 'Not available on this APK' : Math.round(el.value * 100) + '%'); }
+    $('#meter').style.width = Math.round((f.energy || f.bass || 0) * 100) + '%';
+    const ctx = $('#musicSpectrum').getContext('2d'); ctx.clearRect(0, 0, 320, 72); ctx.fillStyle = '#f2b544';
+    const bins = Array.isArray(f.spectrum) ? f.spectrum : []; bins.slice(0, 16).forEach((v, i) => ctx.fillRect(i * 20 + 2, 72 - v * 70, 15, v * 70));
+    if (f.source === 'device' && f.silence) silentFrames++; else silentFrames = 0;
+    if (silentFrames > 70) { $('#musicNotice').textContent = 'No capturable audio detected. This can mean silence or an app capture restriction. Microphone fallback is your choice.'; $('#musicFallback').hidden = false; }
+    let bank = (S.djBank || []).filter(key => /^s\d+$/.test(key) ? !!P.NATIVE_SCENES[+key.slice(1)] : /^m\d+$/.test(key) && P.isKnownMode(+key.slice(1)));
+    if (!bank.length) bank = (S.nativeSceneFav || []).map(id => 's' + id).concat(Object.keys(S.modeFav).filter(id => S.modeFav[id] && P.isKnownMode(+id)).map(id => 'm' + id));
+    if (!bank.length) bank = S.smartScenes.quick.map(id => 's' + id);
+    // Existing manual sensitivity remains effective for Bass Pulse and Smooth Flow; Smart Auto is automatic.
+    const input = S.musicStyle === 'smart' || S.musicStyle === 'dj' ? f : { ...f, bass: Math.min(1, (f.bass || 0) * S.sens / 60), energy: Math.min(1, (f.energy || 0) * S.sens / 60) };
+    const decision = smartResponse.frame(input, { style: S.musicStyle, hue: S.h, saturation: S.s, djInterval: S.djInterval, bank }, now);
+    if (!decision || !link.ready || S.driveMode === 'driving') return;
+    if (decision.kind === 'native') {
+      const id = +decision.key.slice(1), kind = decision.key[0] === 's' ? 'scene' : 'mode';
+      setNative(kind, id); link.cancel(['color', 'scene', 'mode']); link.send(kind === 'scene' ? P.scene(id) : P.mode(id), kind);
+      if (kind === 'mode') link.send(P.speed(S.speed), 'speed');
+      $('#djStatus').textContent = 'Last requested: ' + (kind === 'scene' ? P.NATIVE_SCENES[id] : modeLabel(id));
+    } else { sendRGB(decision.rgb); paint(decision.rgb, decision.level); }
   }
-  let musicBusy = false, musicPausedByHide = false;
   async function startMusic() {
     if (musicBusy) return;
     if (S.driveMode === 'driving') return toast('Music effects are parked-only. Switch Car mode to Parked first.');
-    musicBusy = true;
-    try { await startMusicInner(); } finally { musicBusy = false; }
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      // The microphone must not keep running in the background: it drains the battery and Android restricts it.
-      if (driver && driver.label === 'Listening…') { stopDriver(); musicPausedByHide = true; render(); }
-    } else if (musicPausedByHide) { musicPausedByHide = false; toast('Music sync paused while the app was in the background. Tap Start listening to resume.'); }
-  });
-  window.addEventListener('pagehide', () => { stopDriver(); });
-  function showListening() {
-    const mb = $('#musicBtn'); mb.setAttribute('aria-pressed', 'true'); mb.textContent = 'Stop listening'; render();
-  }
-  async function startMusicInner() {
-    stopDriver(); activeMode = null; renderModes();
-    mus.avg = 0.05; mus.fast = 0; mus.slow = 0; mus.beatCount = 0; mus.env = 0.2; mus.lastTx = 0; mus.lastRgb = null; mus.lastDJ = 0; mus.mode = null;
-
-    // Inside the APK: native microphone detection; requires RECORD_AUDIO permission.
-    if (window.MelkAudio && window.MelkAudio.native) {
-      try { await MelkAudio.start((f) => { if (driver && driver.label === 'Listening…') musicFrame(f.bass); }); }   // stray frames after stop are ignored
-      catch (e) { return toast((e && e.message) || 'Could not start audio capture.'); }
+    if (!link.ready) return toast('Connect the strip first.');
+    stopDriver(); musicBusy = true; S.auto = false; save(); activeMode = null; renderModes();
+    const token = ++musicSession; smartResponse = Melk.smartMusic.create(); silentFrames = 0; manualFast = manualSlow = 0; manualBeatAt = -10000;
+    $('#musicNotice').textContent = 'Waiting for audio permission / capture consent…'; $('#musicBtn').disabled = true;
+    try {
+      const result = await MelkSmartAudio.start(S.musicSource, f => musicFrame(f), message => { if (driver && driver.label === 'Listening…') { stopDriver(); render(); $('#musicNotice').textContent = message; } });
+      if (token !== musicSession || S.driveMode === 'driving') { await MelkSmartAudio.stop(); return; }
       if (!S.on) setPower(true);
-      driver = { label: 'Listening…', stop() { MelkAudio.stop(); } };
-      return showListening();
-    }
-
-    // Browser: microphone only (hears the speaker, not earphones)
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('This browser cannot use the microphone');
-    let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
-    catch (e) { return toast('Microphone permission denied. Allow Microphone for MELK Studio in Android settings.'); }
-    if (!S.on) setPower(true);
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const an = ctx.createAnalyser(); an.fftSize = 256; an.smoothingTimeConstant = 0.6;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const data = new Uint8Array(an.frequencyBinCount);
-    const id = setInterval(() => {
-      an.getByteFrequencyData(data);
-      let bass = 0; for (let i = 1; i < 8; i++) bass += data[i]; bass /= 7 * 255;
-      musicFrame(bass);
-    }, 60);
-    driver = { label: 'Listening…', stop() { clearInterval(id); stream.getTracks().forEach((t) => t.stop()); ctx.close(); } };
-    showListening();
+      driver = { label: 'Listening…', stop() { musicSession++; MelkSmartAudio.stop(); } };
+      $('#musicBtn').setAttribute('aria-pressed', 'true'); $('#musicBtn').textContent = 'Stop listening';
+      $('#musicActiveSource').textContent = result.source === 'device' ? 'Device Audio' : 'Microphone';
+      $('#musicNotice').textContent = result.legacy ? 'Legacy microphone level analysis. Full FFT and Device Audio require native 1.2.0.' : 'Audio is processed locally. Capture pauses when MELK Studio leaves the foreground.';
+      $('#musicFallback').hidden = true; render();
+    } catch (e) { $('#musicNotice').textContent = e.message || 'Audio capture unavailable.'; $('#musicFallback').hidden = S.musicSource === 'microphone'; }
+    finally { musicBusy = false; $('#musicBtn').disabled = false; }
   }
-  $('#musicBtn').addEventListener('click', () => {
-    if (driver && driver.label === 'Listening…') { const dj = S.musicStyle === 'dj'; stopDriver(); render(); if (!dj) pushColor(); /* DJ leaves its last hardware pattern running */ } else startMusic();
+  $('#musicBtn').addEventListener('click', () => { if (driver && driver.label === 'Listening…') { const dj = S.musicStyle === 'dj'; stopDriver(); render(); if (!dj) pushColor(); } else startMusic(); });
+  $('#musicSource').value = S.musicSource;
+  $('#musicSource').addEventListener('change', e => { musicSession++; stopDriver(); S.musicSource = e.target.value; save(); $('#musicNotice').textContent = 'Tap Start listening to use the selected source.'; });
+  $('#musicFallback').addEventListener('click', () => { S.musicSource = 'microphone'; $('#musicSource').value = 'microphone'; save(); startMusic(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (rotation) rotation.stop(); if (driver && driver.label === 'Listening…') { stopDriver(); musicPausedByHide = true; render(); } }
+    else if (musicPausedByHide) { musicPausedByHide = false; $('#musicNotice').textContent = 'Capture paused in the background. Tap Start for a fresh audio session.'; }
   });
+  window.addEventListener('pagehide', () => { musicSession++; stopDriver(); MelkSmartAudio.stop(); });
   $('#djInterval').value = S.djInterval;
   $('#djIntervalOut').textContent = S.djInterval + ' s';
   $('#djInterval').addEventListener('input', e => { S.djInterval = +e.target.value; $('#djIntervalOut').textContent = S.djInterval + ' s'; save(); });
@@ -1039,11 +995,12 @@
 
   /* ---------- tabs ---------- */
   function showTab(t) {
+    if (t === 'fx' && S.driveMode === 'driving') return toast('Browse native scenes while parked.');
     if (t === 'studio') t = 'settings';
     S.tab = t; save(); $('#app').dataset.tab = t;
     $$('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
     ['color', 'fx', 'music', 'settings'].forEach((n) => { $('#tab-' + n).hidden = n !== t; });
-    if (t === 'fx') renderModes();
+    if (t === 'fx') { fxCat = 'scenes'; fxQuery = ''; $('#fxSearch').value = ''; setSeg('built'); renderModes(); }
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -1052,6 +1009,7 @@
   const syncInert = () => { $('#app').inert = !!openPageId || !$('#car').hidden; };   // keep keyboard and screen-reader focus inside the open page
   const hidePages = () => { $$('.page').forEach((p) => { p.hidden = true; }); document.body.classList.remove('noscroll'); };
   function openPage(id, fromPop) {
+    if ((id === 'rotation' || id === 'scenes') && S.driveMode === 'driving') return toast('Scene browsing and editing are parked-only.');
     if (id === 'dev' && !S.devUnlocked) return;
     const el = $('#page-' + id); if (!el) return;
     pageOpener = document.activeElement; hidePages(); el.hidden = false; el.scrollTop = 0; openPageId = id;
@@ -1076,7 +1034,7 @@
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPageId && !$('#dlg').open && $('#car').hidden) closePage(false); });
 
-  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7';
+  const APP_VER = (window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0';
   $('#aboutText').textContent = 'Version ' + APP_VER;
   let aboutTaps = 0, aboutAt = 0;
   function refreshDev() {
@@ -1113,15 +1071,18 @@
 
   /* ---------- scenes: one tap sets everything for a situation ---------- */
   function sendNativeScene(id) {
+    if (!P.NATIVE_SCENES[id] || !link.ready) { toast('Connect the strip first.'); return false; }
     if (S.driveMode === 'driving') return toast('Hardware effects are parked-only. Switch Car mode to Parked first.');
     stopDriver(); cancelRamp(); cancelFade(); setSleep(0);
     activeMode = null; activeScene = null;
     S.nativeLast = id; setNative('scene', id);
+    S.smartScenes = Melk.smartScenes.preferences(S.smartScenes); S.smartScenes.recent = [id, ...S.smartScenes.recent.filter(x => x !== id)].slice(0, 8); save();
     if (!S.on) setPower(true);
     link.cancel(['color']);
     link.send(P.scene(id), 'scene');
     renderModes(); renderScenes(); render();
-    toast('Scene ' + id + ': ' + P.NATIVE_SCENES[id] + (S.verify && S.verify['scene:' + id] && S.verify['scene:' + id].appClose ? '' : ' (not verified on your strip)'));
+    if (!rotationSending) toast('Native scene: ' + P.NATIVE_SCENES[id]);
+    return true;
   }
 
   function applyScene(sc, opts) {
@@ -1255,24 +1216,14 @@
   function renderScenes() {
     renderCar();
     const box = $('#scenes'); if (!box) return; box.innerHTML = '';
-    const auto = document.createElement('button');
-    auto.type = 'button'; auto.className = 'scene auto'; auto.textContent = 'Auto'; auto.setAttribute('aria-pressed', String(!!S.auto));
-    auto.title = 'Picks a scene by time of day';
-    auto.addEventListener('click', () => {
-      S.auto = !S.auto; save();
-      if (S.auto) { if (!link.ready) { S.auto = false; return toast('Connect the strip first'); } lastAuto = null; runAuto(true); }
-      else toast('Auto is off');
-      renderScenes();
-    });
-    box.appendChild(auto);
-    const ordered = S.scenes.filter((s) => isFav(s.id)).concat(S.scenes.filter((s) => !isFav(s.id)));
-    ordered.forEach((sc) => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'scene'; b.textContent = (isFav(sc.id) ? '★ ' : '') + sc.name; b.setAttribute('aria-pressed', String(activeScene === sc.id));
-      b.style.setProperty('--sp', scenePreview(sc));
-      b.addEventListener('click', () => { S.auto = false; applyScene(sc); });
-      box.appendChild(b);
-    });
+    S.smartScenes = Melk.smartScenes.preferences(S.smartScenes);
+    const addQuick = (text, fn, disabled) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'scene quickScene'; b.textContent = text; b.disabled = !!disabled; b.addEventListener('click', fn); box.appendChild(b); };
+    const driving = S.driveMode === 'driving';
+    addQuick(rotation && rotation.snapshot().running ? 'Auto · Running' : 'Auto', () => openPage('rotation'), driving);
+    for (let i = 0; i < 4; i++) { const id = S.smartScenes.quick[i]; addQuick(id ? P.NATIVE_SCENES[id] : '+ Add scene', () => id ? (S.auto = false, sendNativeScene(id)) : editQuickScenes(), driving); }
+    addQuick('All 28', () => showTab('fx'), driving);
+    const edit = $('#quickEdit'); if (edit) edit.disabled = driving;
+    const recent = $('#nativeRecent'); if (recent) { recent.innerHTML = ''; S.smartScenes.recent.forEach(id => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost sm'; b.textContent = P.NATIVE_SCENES[id]; b.disabled = driving; b.addEventListener('click', () => { S.auto = false; sendNativeScene(id); }); recent.appendChild(b); }); recent.parentElement.hidden = !S.smartScenes.recent.length; }
     // Recent
     const rec = $('#recentList');
     if (rec) {
@@ -1292,6 +1243,7 @@
         '<button type="button" class="lnk" aria-label="Copy shortcut link for ' + esc(sc.name) + '">Link</button>' +
         '<button type="button" class="map" aria-label="Map ' + esc(sc.name) + ' to a hardware mode">Hardware</button>' +
         '<button type="button" class="del" aria-label="Delete ' + esc(sc.name) + '">Delete</button></div></details>';
+      const play = document.createElement('button'); play.type = 'button'; play.className = 'btn ghost customPlay'; play.textContent = 'Play ' + sc.name; play.setAttribute('aria-label', 'Play saved scene ' + sc.name); play.addEventListener('click', () => { S.auto = false; applyScene(sc); }); r.querySelector('.srTop').after(play);
       r.querySelector('.fav').addEventListener('click', () => toggleFav(sc.id));
       r.querySelector('.share').addEventListener('click', () => shareScene(sc));
       r.querySelector('.map').addEventListener('click', () => mapSceneHardware(sc));
@@ -1307,7 +1259,7 @@
   }
   function renderNavSubs() {
     const v = $('#navVehicleSub'); if (v) v.textContent = veh().name + ' · ' + (S.driveMode === 'driving' ? 'Driving' : 'Parked');
-    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.1.7');
+    const u = $('#navUpdateSub'); if (u) u.textContent = 'Version ' + ((window.MelkOta && window.MelkOta.APP_VERSION) || '1.2.0');
   }
 
   /* ---------- Scene DNA: share and import ---------- */
@@ -1403,6 +1355,8 @@
     if (S.driveMode === mode) return;
     S.driveMode = mode; save();
     if (mode === 'driving') {
+      if (S.tab === 'fx') showTab('color');
+      if (rotation) rotation.stop(); musicSession++; if (window.MelkSmartAudio) MelkSmartAudio.stop();
       // Replace anything moving or hardware-driven with the static colour, and respect the brightness limit.
       const curScene = S.scenes.find((x) => x.id === activeScene);
       if ((driver && driver.label === 'Listening…') || S.native || (curSeqId && !seqCalm(S.seqs.find((x) => x.id === curSeqId))) || (curScene && !isDriveSafe(curScene))) {
@@ -1676,12 +1630,45 @@
   }
 
   function renderAll() {
+    S.smartScenes = Melk.smartScenes.preferences(S.smartScenes);
+    if (rotation) rotation.configure(S.smartScenes);
+    $('#musicSource').value = S.musicSource;
+    $('#rotationInterval').value = S.smartScenes.interval; $('#rotationOrder').value = S.smartScenes.order;
+    $$('#rotationScenes input').forEach(e => { e.checked = S.smartScenes.selected.includes(+e.value); });
+    renderDjBank();
     $('#sp').value = S.speed; $('#spOut').textContent = S.speed + '%'; $('#sen').value = S.sens; $('#senOut').textContent = S.sens + '%';
     $('#warm').value = S.warm; $('#flowSec').value = S.flowSec; $('#flowOut').textContent = fmtSec(S.flowSec); $('#showAll').checked = !!S.showAll;
     $$('#fadeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.fade === S.fadeMs)));
     $('#sunDim').checked = !!S.sunDim; $('#sunCap').value = S.sunCap; $('#sunCapOut').textContent = S.sunCap + '%'; sunInfo();
     renderPalette(); renderModes(); renderSeqs(); renderScenes(); render(); renderHwRainbow(); renderController(); refreshDev(); renderBanner(); showTab(S.tab || 'color');
   }
+  S.smartScenes = Melk.smartScenes.preferences(S.smartScenes);
+  rotation = Melk.smartScenes.create({ preferences: S.smartScenes,
+    onError: error => { $('#rotationStatus').textContent = 'Rotation stopped: ' + (error.message || 'Scene command failed.'); },
+    canRun: () => link.ready && !document.hidden && S.driveMode !== 'driving',
+    send: id => { rotationSending = true; try { return sendNativeScene(id); } finally { rotationSending = false; } },
+    onChange: status => { const el = $('#rotationStatus'); if (el) el.textContent = status.running ? 'Rotating · Last requested: ' + (P.NATIVE_SCENES[status.current] || 'starting') + ' · Next: ' + (P.NATIVE_SCENES[status.next] || '—') : 'Stopped. The last native scene is left on the controller.'; const b = $('#rotationStart'); if (b) b.textContent = status.running ? 'Restart rotation' : 'Start rotation'; const quick = $('#scenes button'); if (quick) quick.textContent = status.running ? 'Auto · Running' : 'Auto'; }
+  });
+  function editQuickScenes() {
+    if (S.driveMode === 'driving') return toast('Edit Quick Scenes while parked.');
+    openDialog('<h3>Quick Scenes</h3><p class="hint">Four slots, left to right. Choose None to remove a shortcut. Your custom scenes stay in Settings → Scenes.</p>' + Array.from({ length: 4 }, (_, i) => '<label class="field"><span>Slot ' + (i + 1) + '</span><select id="quickSlot' + i + '" class="text"><option value="">None</option>' + Object.keys(P.NATIVE_SCENES).map(id => '<option value="' + id + '" ' + (S.smartScenes.quick[i] === +id ? 'selected' : '') + '>' + esc(P.NATIVE_SCENES[id]) + '</option>').join('') + '</select></label>').join('') + '<div class="dlgActs"><button value="cancel" class="btn ghost">Cancel</button><button id="saveQuick" type="button" class="btn main">Save shortcuts</button></div>', f => {
+      f.querySelector('#saveQuick').addEventListener('click', () => { const quick = Array.from({ length: 4 }, (_, i) => +f.querySelector('#quickSlot' + i).value).filter(Boolean); if (new Set(quick).size !== quick.length) return toast('Choose different native scenes for each slot.'); S.smartScenes.quick = quick; save(); renderScenes(); closeDialog(); });
+    });
+  }
+  $('#quickEdit').addEventListener('click', editQuickScenes);
+  $('#fxQuick').addEventListener('click', () => { const c = fxCurrent(); if (!c || c.kind !== 'scene' || S.driveMode === 'driving') return; if (S.smartScenes.quick.includes(c.id)) return toast('Already in Quick Scenes.'); if (S.smartScenes.quick.length < 4) { S.smartScenes.quick.push(c.id); save(); renderScenes(); toast('Added to Quick Scenes.'); } else { editQuickScenes(); toast('All four slots are full. Choose which scene to replace.'); } });
+  function saveRotation() { S.smartScenes.selected = $$('#rotationScenes input:checked').map(e => +e.value); S.smartScenes.interval = +$('#rotationInterval').value; S.smartScenes.order = $('#rotationOrder').value; save(); rotation.configure(S.smartScenes); }
+  $('#rotationScenes').innerHTML = Object.keys(P.NATIVE_SCENES).map(id => '<label class="check"><input type="checkbox" value="' + id + '" ' + (S.smartScenes.selected.includes(+id) ? 'checked' : '') + '><span>' + esc(P.NATIVE_SCENES[id]) + '</span></label>').join('');
+  $('#rotationInterval').value = S.smartScenes.interval; $('#rotationOrder').value = S.smartScenes.order;
+  $('#rotationScenes').addEventListener('change', saveRotation); $('#rotationInterval').addEventListener('change', saveRotation); $('#rotationOrder').addEventListener('change', saveRotation);
+  $('#rotationStart').addEventListener('click', () => { if (!link.ready || document.hidden || S.driveMode === 'driving') return toast('Connect the strip and configure rotation while parked.'); stopDriver(); S.auto = false; save(); rotation.configure(S.smartScenes); if (!rotation.start()) toast('Select at least one native scene.'); });
+  $('#rotationStop').addEventListener('click', () => rotation.stop());
+  link.addEventListener('state', () => { if (!link.ready) { rotation.stop(); if (driver && driver.label === 'Listening…') stopDriver(); } });
+  $('#legacyAuto').addEventListener('click', () => { if (!link.ready || S.driveMode === 'driving') return toast('Connect the strip while parked first.'); const enabled = !S.auto; stopDriver(); S.auto = enabled; save(); lastAuto = null; if (enabled) runAuto(true); $('#legacyAuto').setAttribute('aria-pressed', String(S.auto)); });
+  function renderDjBank() { $('#djBank').innerHTML = Object.keys(P.NATIVE_SCENES).map(id => '<label class="check"><input type="checkbox" value="s' + id + '" ' + ((S.djBank || []).includes('s' + id) ? 'checked' : '') + '><span>Native ' + esc(P.NATIVE_SCENES[id]) + '</span></label>').join('') + Object.keys(S.modeFav).filter(id => S.modeFav[id] && P.isKnownMode(+id)).map(id => '<label class="check"><input type="checkbox" value="m' + id + '" ' + ((S.djBank || []).includes('m' + id) ? 'checked' : '') + '><span>' + esc(modeLabel(+id)) + '</span></label>').join('');
+  }
+  $('#musicAdvanced').addEventListener('toggle', renderDjBank);
+  $('#djBank').addEventListener('change', () => { S.djBank = $$('#djBank input:checked').map(e => e.value); save(); });
   renderAll();
   runHash();
 
@@ -1689,7 +1676,7 @@
   MelkApk.init({
     hooks: {
       beforeInstall: async () => {
-        if (driver) stopDriver();                                                  // music and phone-driven effects stop sending
+        stopDriver();                                                             // music and phone-driven effects stop sending
         if (window.MelkAudio && window.MelkAudio.native) { try { await window.MelkAudio.stop(); } catch (e) { /* already stopped */ } }
         await link.suspend();                                                      // closes Bluetooth cleanly and keeps the strip for the next start
       },

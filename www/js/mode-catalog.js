@@ -36,13 +36,13 @@
   function scenes(st) {
     return Object.keys(P.NATIVE_SCENES).map(Number).sort((a, b) => a - b).map((id) => ({
       kind: 'scene', key: 's' + id, id, group: 'scenes', groupLabel: 'Scene', mlName: P.NATIVE_SCENES[id], name: P.NATIVE_SCENES[id], renamed: false,
-      fav: false, hidden: false, status: statusOf('scene', id, st) }));
+      fav: !!(st.sceneFav && st.sceneFav.includes(id)), hidden: false, status: statusOf('scene', id, st) }));
   }
 
   /** The chips, in order: All, Favourites, Scenes, then Magic Lantern's groups, then Hidden (only when something is hidden). */
   function categories(modeList, sceneList) {
     const visible = modeList.filter((e) => !e.hidden);
-    const cats = [{ key: 'all', label: 'All', count: visible.length }, { key: 'fav', label: 'Favourites', count: visible.filter((e) => e.fav).length }, { key: 'scenes', label: 'Scenes', count: sceneList.length }];
+    const cats = [{ key: 'scenes', label: 'Scenes', count: sceneList.length }, { key: 'fav', label: 'Favourites', count: visible.concat(sceneList).filter(e => e.fav).length }, { key: 'all', label: 'All', count: visible.length + sceneList.length }];
     GROUP_ORDER.forEach((grp) => cats.push({ key: grp, label: groupLabel(grp), count: visible.filter((e) => e.group === grp).length }));
     const hidden = modeList.filter((e) => e.hidden).length;
     if (hidden) cats.push({ key: 'hidden', label: 'Hidden', count: hidden });
@@ -56,8 +56,8 @@
     if (q) list = modeList.filter((e) => !e.hidden).concat(sceneList);
     else if (cat === 'scenes') list = sceneList;
     else if (cat === 'hidden') list = modeList.filter((e) => e.hidden);
-    else if (cat === 'fav') list = modeList.filter((e) => e.fav && !e.hidden);
-    else if (cat === 'all') list = modeList.filter((e) => !e.hidden);
+    else if (cat === 'fav') list = modeList.concat(sceneList).filter((e) => e.fav && !e.hidden);
+    else if (cat === 'all') list = modeList.filter((e) => !e.hidden).concat(sceneList);
     else list = modeList.filter((e) => e.group === cat && !e.hidden);
     if (q) {
       const tokens = q.split(/\s+/);

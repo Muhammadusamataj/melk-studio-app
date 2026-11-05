@@ -19,7 +19,7 @@ test('28 strip scenes are separate from modes: own kind, own keys, never in the 
   const { m, s } = all(ST()); assert.equal(s.length, 28);
   s.forEach((e) => { assert.equal(e.kind, 'scene'); assert.equal(e.group, 'scenes'); assert.equal(e.name, P.NATIVE_SCENES[e.id]); });
   const keys = new Set(m.concat(s).map((e) => e.key)); assert.equal(keys.size, 213 + 28, 'a scene and a mode with the same number never share a key');
-  assert.equal(J(MC.filter(m, s, { cat: 'all' })).some((e) => e.kind === 'scene'), false);
+  assert.equal(J(MC.filter(m, s, { cat: 'all' })).filter(e => e.kind === 'scene').length, 28);
 });
 test('a rename shows the user\'s name and keeps Magic Lantern\'s name for reference', () => {
   const e = J(MC.modes(ST({ names: { 133: 'Night blue' } }))).find((x) => x.id === 133);
@@ -34,14 +34,14 @@ test('only what the user recorded is "verified" or "unsupported"; everything els
 });
 test('chips: All, Favourites, Scenes, then the groups; Hidden only when something is hidden; counts ignore hidden', () => {
   const { m, s } = all(ST()); const c = J(MC.categories(m, s));
-  assert.deepEqual(c.map((x) => x.key), ['all', 'fav', 'scenes', 'Basic', 'Curtain', 'Trans', 'Water', 'Flow', 'Tail', 'Run', 'RunBack']);
-  assert.equal(c[0].count, 213); assert.equal(c[1].count, 0); assert.equal(c[2].count, 28); assert.equal(c.find((x) => x.key === 'RunBack').label, 'Run back');
+  assert.deepEqual(c.map((x) => x.key), ['scenes', 'fav', 'all', 'Basic', 'Curtain', 'Trans', 'Water', 'Flow', 'Tail', 'Run', 'RunBack']);
+  assert.equal(c[2].count, 241); assert.equal(c[1].count, 0); assert.equal(c[0].count, 28); assert.equal(c.find((x) => x.key === 'RunBack').label, 'Run back');
   const st = ST({ fav: { 10: 1, 133: 1 }, hidden: { 133: 1, 0: 1 } }); const a = all(st); const c2 = J(MC.categories(a.m, a.s));
-  assert.equal(c2.find((x) => x.key === 'all').count, 211); assert.equal(c2.find((x) => x.key === 'fav').count, 1); assert.equal(c2.at(-1).key, 'hidden'); assert.equal(c2.at(-1).count, 2);
+  assert.equal(c2.find((x) => x.key === 'all').count, 239); assert.equal(c2.find((x) => x.key === 'fav').count, 1); assert.equal(c2.at(-1).key, 'hidden'); assert.equal(c2.at(-1).count, 2);
 });
 test('filtering by chip', () => {
   const st = ST({ fav: { 10: 1, 133: 1 }, hidden: { 133: 1 } });
-  assert.equal(rows(st, { cat: 'all' }).length, 212); assert.deepEqual(rows(st, { cat: 'fav' }).map((e) => e.id), [10]);
+  assert.equal(rows(st, { cat: 'all' }).length, 240); assert.deepEqual(rows(st, { cat: 'fav' }).map((e) => e.id), [10]);
   assert.deepEqual(rows(st, { cat: 'hidden' }).map((e) => e.id), [133]); assert.equal(rows(st, { cat: 'scenes' }).length, 28);
   assert.ok(rows(st, { cat: 'Flow' }).every((e) => e.group === 'Flow')); assert.equal(rows(st, { cat: 'Flow' }).length, 24);
 });

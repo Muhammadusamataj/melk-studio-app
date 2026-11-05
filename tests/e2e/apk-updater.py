@@ -5,6 +5,7 @@ All Android calls are mocked (tests/e2e/apk_mock.py). Run from the project root:
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -37,7 +38,7 @@ async def prepare_ready(pg):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---- 1. two separate options
         pg, errs = await new_page(b); await to_updates(pg)
@@ -65,7 +66,7 @@ async def main():
         pg, errs = await new_page(b)
         before = await js(pg, "(() => { const s = JSON.parse(localStorage.getItem('melk.studio.v1')||'{}'); return JSON.stringify([s.scenes, s.palette, s.verify, s.vehicles]); })()")
         await pg.click('#btnConn'); await pg.wait_for_timeout(700)
-        await pg.click('#t-music'); await pg.click('#musicBtn'); await pg.wait_for_timeout(300)
+        await pg.click('#t-music'); await pg.select_option('#musicSource', 'microphone'); await pg.click('#musicBtn'); await pg.wait_for_timeout(300)
         check('setup: strip connected and music listening', await js(pg, 'window.__ble.connects') == 1 and await js(pg, 'window.__audio.start') >= 1)
         await js(pg, 'window.__order.length = 0')   # starting music logs its own audio.stop; only what happens from here matters
         await to_updates(pg)

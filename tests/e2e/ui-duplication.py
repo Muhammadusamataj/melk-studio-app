@@ -9,6 +9,7 @@ finds explanations that are repeated on the same screen. Optionally saves a scre
 import argparse, asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 
 ap = argparse.ArgumentParser(); ap.add_argument('--root', default=str(pathlib.Path(__file__).resolve().parents[2])); ap.add_argument('--shots'); ap.add_argument('--json'); ap.add_argument('--assert', dest='do_assert', action='store_true')
@@ -51,7 +52,7 @@ METRICS = r"""
 async def main():
     out = {}
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         async def page(connect=True):
             ctx = await b.new_context(viewport={'width': 390, 'height': 1500}, device_scale_factor=1.5); pg = await ctx.new_page(); errs = []
             pg.on('pageerror', lambda e: errs.append(str(e)))

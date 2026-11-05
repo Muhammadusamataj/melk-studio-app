@@ -1,0 +1,22 @@
+plugins { id 'java' }
+
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['../app/src/main/java']
+            include 'com/bleled/com/ApkDownloader.java'
+            include 'com/bleled/com/Hashes.java'
+            include 'com/bleled/com/UpdateException.java'
+        }
+    }
+    test {
+        java {
+            srcDirs = ['../app/src/test/java']
+            include 'com/bleled/com/ApkDownloaderTest.java'
+        }
+    }
+}
+
+dependencies { testImplementation 'junit:junit:4.13.2' }

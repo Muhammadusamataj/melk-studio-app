@@ -50,7 +50,7 @@ test('1.1.5 client refuses to install a manifest without a valid checksum', asyn
 test('the packaged client behaves the same way for the next release', async () => {
   const v = /APP_VERSION\s*=\s*'([^']+)'/.exec(fs.readFileSync(NEW, 'utf8'))[1];
   const [a, b, c] = v.split('.').map(Number), next = [a, b, c + 1].join('.');
-  assert.ok(/^\d+\.\d+\.\d+$/.test(v) && c >= 6, 'packaged version ' + v);
+  assert.ok(/^\d+\.\d+\.\d+$/.test(v) && (a > 1 || b > 1 || c >= 6), 'packaged version ' + v);
   assert.match((await check(NEW, 'builtin', man(next))).status, new RegExp('New web update v' + next.replace(/\./g, '\\.')));
   assert.match((await check(NEW, 'builtin', man(v))).status, /Up to date/);
 });

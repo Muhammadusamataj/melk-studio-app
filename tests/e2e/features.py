@@ -2,6 +2,7 @@
 """End-to-end checks for the redesigned interface and the new features (mocked Bluetooth and audio plugins).
 Run from the project root:  python3 tests/e2e/features.py"""
 import asyncio, json, pathlib, sys
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -48,7 +49,7 @@ async def unlock_dev(pg):
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
 
         # ---------- A. structure and navigation ----------
         pg, errs = await fresh(b, connect=False)
@@ -84,9 +85,8 @@ async def main():
         await pg.click(row + ' .fav'); await pg.wait_for_timeout(150)
         await close_page(pg, 'scenes'); await pg.click('#t-color'); await pg.wait_for_timeout(100)
         chips = await pg.eval_on_selector_all('#scenes .scene', 'e=>e.map(x=>x.textContent)')
-        check('a favourite scene is starred and listed first', chips[1].startswith('★ Movie'), chips[:3])
-        await pg.click('#scenes .scene:has-text("Relax")'); await pg.wait_for_timeout(300)
-        await open_page(pg, 'scenes')
+        check('Quick Scenes stays compact while custom favourites are preserved', len(chips) == 6 and (await state(pg))['favScenes'] == ['movie'], chips)
+        await open_page(pg, 'scenes'); await pg.click('#sceneList .sceneRow:has-text("Relax") .customPlay'); await pg.wait_for_timeout(300)
         check('recent scenes are listed', 'Relax' in await pg.inner_text('#recentList'))
         await pg.evaluate("document.querySelectorAll('#sceneList .srMore').forEach(d=>d.open=true)")
         await pg.click('#sceneList .sceneRow:has-text("Movie") .share'); await pg.wait_for_timeout(200)
@@ -106,8 +106,8 @@ async def main():
         m = await do_import('{"melk":"scene","v":1,"name":"Raw","type":"color","color":"#ffffff","bytes":[126,4,4,1,0,1,255,0,239]}')
         await pg.evaluate("document.querySelectorAll('#sceneList .srMore').forEach(d=>d.open=true)")
         await do_import({'melk': 'scene', 'v': 1, 'name': 'Fake HW', 'type': 'hardware', 'hardware': {'kind': 'mode', 'id': 103}, 'fallbackColor': '#ff0000'})
-        await close_page(pg, 'scenes'); await pg.click('#t-color'); await clear(pg)
-        await pg.click('#scenes .scene:has-text("Fake HW")'); await pg.wait_for_timeout(500)
+        await clear(pg)
+        await pg.click('#sceneList .sceneRow:has-text("Fake HW") .customPlay'); await pg.wait_for_timeout(500)
         w = await W(pg)
         check('an unverified shared hardware effect only ever sends a static colour', any(x.startswith(COLOUR) for x in w) and not any(x.startswith('7e0503') or x.startswith('7e0531') for x in w), w[:5])
         check('no page errors (scenes)', not errs, errs)
@@ -118,10 +118,9 @@ async def main():
         grid = await pg.eval_on_selector_all('#carGrid button', 'e=>e.map(x=>x.textContent)')
         check('Driving hides parked-only scenes in Car mode', 'Party' not in grid and 'Night drive' in grid, grid)
         await pg.click('#carExit'); await pg.click('#t-color'); await pg.wait_for_timeout(700); await clear(pg)   # let the brightness limit settle
-        await pg.click('#scenes .scene:has-text("Party")'); await pg.wait_for_timeout(300)
-        check('a parked-only scene is refused while Driving, and nothing is sent', 'Parked-only' in await toast(pg) and await W(pg) == [], [await toast(pg), await W(pg)])
-        await pg.click('#scenes .scene:has-text("Dinner")'); await pg.wait_for_timeout(300)
-        check('hardware scenes (Dinner) are refused while Driving', 'Parked-only' in await toast(pg) and not any(x.startswith('7e0531') for x in await W(pg)))
+        await pg.evaluate("document.querySelectorAll('#scenes button')[4].click()"); await pg.wait_for_timeout(300)
+        check('Quick native scenes are disabled while Driving', await pg.is_disabled('#scenes .scene:has-text("Party")') and await W(pg) == [])
+        check('all native browsing shortcuts are disabled while Driving', await pg.eval_on_selector_all('#scenes button', 'es=>es.every(e=>e.disabled)') and not any(x.startswith('7e0531') for x in await W(pg)))
         await pg.evaluate("const r=document.getElementById('br'); r.value=100; r.dispatchEvent(new Event('input',{bubbles:true}))"); await pg.wait_for_timeout(100)
         check('brightness is limited while Driving (40%)', int(await pg.input_value('#br')) == 40, await pg.input_value('#br'))
         await pg.click('#t-music'); await pg.click('#musicBtn'); await pg.wait_for_timeout(300)
@@ -159,8 +158,8 @@ async def main():
 
         # ---------- D. music lifecycle ----------
         pg, errs = await fresh(b)
-        await pg.click('#t-music'); await pg.evaluate("window.__audio.delay=400")
-        await pg.click('#musicBtn'); await pg.click('#musicBtn'); await pg.wait_for_timeout(900)
+        await pg.click('#t-music'); await pg.select_option('#musicSource', 'microphone'); await pg.evaluate("window.__audio.delay=400")
+        await pg.evaluate("document.getElementById('musicBtn').click(); document.getElementById('musicBtn').click()"); await pg.wait_for_timeout(900)
         a = await pg.evaluate('window.__audio')
         check('a double tap starts audio capture only once', a['start'] == 1, a)
         check('the button shows Stop listening', await pg.inner_text('#musicBtn') == 'Stop listening')
@@ -173,10 +172,10 @@ async def main():
         check('capture stops when the app goes to the background', a['stop'] >= 1 and await pg.inner_text('#musicBtn') == 'Start listening')
         check('no colour is sent after the app is hidden', not any(x.startswith(COLOUR) for x in await W(pg)))
         await pg.evaluate("Object.defineProperty(document,'hidden',{value:false,configurable:true}); document.dispatchEvent(new Event('visibilitychange'))"); await pg.wait_for_timeout(200)
-        check('the user is told music was paused', 'paused' in (await toast(pg)).lower(), await toast(pg))
+        check('the user is told music was paused', 'paused' in (await pg.inner_text('#musicNotice')).lower(), await pg.inner_text('#musicNotice'))
         # DJ patterns keep their hardware pattern when listening stops
         await pg.evaluate("const r=document.getElementById('djInterval'); r.value=4; r.dispatchEvent(new Event('input',{bubbles:true}))")
-        await pg.click('[data-ms=dj]'); await pg.wait_for_timeout(4300)
+        await pg.evaluate("const s=JSON.parse(localStorage.getItem('melk.studio.v1')); s.djBank=['m103','m128']; localStorage.setItem('melk.studio.v1',JSON.stringify(s))"); await pg.reload(); await pg.wait_for_timeout(400); await pg.click('#btnConn'); await pg.wait_for_timeout(700); await pg.click('#t-music'); await pg.click('[data-ms=dj]'); await pg.wait_for_timeout(4300)
         await pg.click('#musicBtn'); await pg.wait_for_timeout(500); await clear(pg)
         for i in range(30): await pg.evaluate(f"window.__lis['audio:frame']({{bass:{0.9 if i%5==0 else 0.03}}})"); await pg.wait_for_timeout(90)
         w = await W(pg); st = await state(pg)
@@ -197,7 +196,7 @@ async def main():
         check('prototype pollution through import is impossible', await pg.evaluate("({}).polluted") is None)
         await pg.fill('#backup', 'not json'); await pg.click('#impBtn'); await pg.wait_for_timeout(200)
         check('text that is not settings is refused', 'not valid' in await toast(pg))
-        check('the interface still works after a bad import', await pg.evaluate("document.querySelectorAll('#scenes .scene').length") >= 9)
+        check('the interface still works after a bad import', await pg.evaluate("document.querySelectorAll('#scenes .scene').length") == 6)
         check('no page errors (backup)', not errs, errs)
 
         # ---------- F. developer tools ----------

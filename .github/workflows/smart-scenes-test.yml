@@ -1,0 +1,90 @@
+name: Smart Scenes v1.2.0 test APK
+
+on:
+  push:
+    branches: [feature/smart-scenes-audio-sync]
+    paths:
+      - 'android/**'
+      - 'www/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'package*.json'
+      - '.github/workflows/smart-scenes-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: npm ci
+      - run: npm test && npm run test:tools
+      - run: npx cap sync android
+      - name: Compile, unit test and lint
+        run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :host-tests:test :app:lintDebug --no-daemon
+      - name: Verify actual APK metadata and signature
+        run: python3 tools/verify-test-apk.py
+      - name: Prepare unpublished compatible web bundle
+        run: python3 tools/make-ota.py 1.2.0 https://muhammadusamataj.github.io/melk-studio-ota-/ota/
+      - name: Upload unpublished web staging files
+        uses: actions/upload-artifact@v4
+        with:
+          name: UNPUBLISHED-web-v1.2.0-${{ github.run_id }}
+          path: ota-out/
+      - name: Upload installable test APK and verified facts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MELK-Studio-v1.2.0-test-${{ github.run_id }}
+          path: test-apk-out/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-validation-${{ github.run_id }}
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+            android/host-tests/build/reports/
+            android/host-tests/build/test-results/
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MELK_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - name: Verify preinstalled Chrome
+        run: google-chrome --version
+      - run: npm run build:preview
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-validation-${{ github.run_id }}
+          path: tests/e2e/out/

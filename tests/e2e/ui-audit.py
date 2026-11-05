@@ -7,6 +7,7 @@ Run from the project root:  python3 tests/e2e/ui-audit.py"""
 import asyncio, json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from apk_mock import APK_MOCK
+import os
 from playwright.async_api import async_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -67,7 +68,7 @@ AUDIT = """
 total = []
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(channel=os.environ.get('MELK_BROWSER_CHANNEL'))
         for (w, h) in SIZES:
             ctx = await b.new_context(viewport={'width': w, 'height': h}); pg = await ctx.new_page()
             errs = []; pg.on('pageerror', lambda e: errs.append('PAGEERR ' + str(e))); pg.on('console', lambda m: errs.append('CONSOLE ' + m.text) if m.type == 'error' else None)
@@ -100,7 +101,7 @@ async def main():
                     await pg.evaluate("document.querySelectorAll('#sceneList .srMore').forEach(d=>d.open=true)")
                 await audit('page: ' + pid, '#page-' + pid)
                 await pg.click(f'#page-{pid} [data-back]')
-            await pg.click('#btnCar'); await audit('car parked', '#car'); await pg.click('#carDriving'); await audit('car driving', '#car'); await pg.click('#carExit')
+            await pg.click('#btnCar'); await audit('car parked', '#car'); await pg.click('#carDriving'); await audit('car driving', '#car'); await pg.click('#carParked'); await pg.click('#carExit')
             await pg.click('#t-settings'); await pg.click('#tab-settings [data-open=scenes]'); await pg.click('#sceneSave'); await audit('dialog: save scene', '#dlg'); await pg.keyboard.press('Escape')
             await pg.click('#sceneImport'); await audit('dialog: import scene', '#dlg'); await pg.keyboard.press('Escape')
             if errs: total.append((w, 'console', errs))

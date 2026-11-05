@@ -39,6 +39,19 @@ class Parsers(unittest.TestCase):
         b = apkinfo.parse_badging(BADGING + 'application-debuggable\n')
         self.assertEqual((b['package'], b['versionCode'], b['versionName'], b['minSdk'], b['debuggable']), ('wl.smartled.rgb', 148, '6.11.10', 32, True))
         self.assertIsNone(apkinfo.parse_badging('garbage'))
+    def test_current_aapt2_minimum_sdk_label(self):
+        self.assertEqual(apkinfo.parse_badging(BADGING.replace("sdkVersion:'32'", "minSdkVersion:'32'"))['minSdk'], 32)
+    def test_repeated_certificate_and_uppercase_digest(self):
+        line = 'Signer #1 certificate SHA-256 digest: ' + A.upper() + '\n'
+        parsed = apkinfo.parse_apksigner('Verifies\n' + line + line)
+        self.assertEqual([s['sha256'] for s in parsed['signers']], [A])
+        different = apkinfo.parse_apksigner('Verifies\n' + line + 'Signer #2 certificate SHA-256 digest: ' + B + '\n')
+        self.assertEqual(len(different['signers']), 2)
+    def test_current_apksigner_scheme_label(self):
+        output = APKSIGNER.replace('Signer #1 certificate', 'V2 Signer: certificate')
+        parsed = apkinfo.parse_apksigner(output)
+        self.assertEqual(parsed['signers'], apkinfo.parse_apksigner(APKSIGNER)['signers'])
+        self.assertEqual(parsed['signerCount'], 1)
 
 class Compatibility(unittest.TestCase):
     def test_an_upgrade_signed_with_the_same_key_is_compatible(self):
