@@ -369,3 +369,20 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--accent),var(-
 #fxRun{flex:1 1 100%}
 .fxSel .row{margin-top:6px}
 @media (max-width:359px){.fxRow{grid-template-columns:38px minmax(0,1fr) auto}.fxCat{padding:0 13px}}
+
+/* Native Quick Scenes and Smart Music keep the existing purple/amber palette. */
+.quickHeading{display:flex;justify-content:space-between;align-items:center;padding:4px 16px}
+.scenes.quickGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow:visible;padding:6px 16px 16px}
+.quickGrid .scene{min-height:56px;padding:10px 6px;white-space:normal;overflow-wrap:anywhere;font-size:.9rem}
+.quickGrid .scene:first-child{border-color:var(--flame);background:var(--card2)}
+.quickGrid .scene:disabled{opacity:.5;cursor:default}
+.sceneChecks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:12px 0}
+.sceneChecks .check{min-height:48px;margin:0;padding:6px;border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere}
+.nativeRecent .btnRow{display:flex;flex-wrap:wrap;margin:8px 0}
+.musicInfo{display:flex;gap:8px;flex-wrap:wrap;font-size:.85rem;color:var(--mute);margin:10px 0}
+#musicSpectrum{width:100%;height:72px;display:block;background:var(--well);border-radius:12px}
+.audioBands{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;font-size:.8rem}
+.audioBands meter{display:block;width:100%;accent-color:var(--flame)}
+.musicStyles{display:grid;grid-template-columns:repeat(2,1fr)}
+.musicStyles button{min-height:48px}.customPlay{min-height:44px}.srTop{flex-wrap:wrap}
+@media(max-width:350px){.sceneChecks{grid-template-columns:1fr}.quickGrid .scene{font-size:.82rem}}

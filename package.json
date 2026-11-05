@@ -1,6 +1,6 @@
 {
   "name": "melk-studio",
-  "version": "1.1.7",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "sync:android": "cap sync android",

@@ -44,7 +44,8 @@
     </details>
   </section>
 
-  <nav class="scenes" id="scenes" aria-label="Scenes"></nav>
+  <div class="quickHeading"><h2>Quick Scenes</h2><button id="quickEdit" class="link" type="button">Edit shortcuts</button></div>
+  <nav class="scenes quickGrid" id="scenes" aria-label="Quick native scenes"></nav>
 
   <main class="stage">
 
@@ -88,7 +89,7 @@
             <label class="chipToggle"><input type="checkbox" id="persistentOnly"><span>✓ Verified only</span></label>
           </div>
           <div class="fxCats" id="fxCats" role="tablist" aria-label="Effect groups"></div>
-          <p class="hint" id="fxCatNote"></p>
+          <p class="hint" id="fxCatNote"></p><div class="nativeRecent" hidden><span class="hint">Recent native scenes</span><div id="nativeRecent" class="btnRow"></div></div>
           <div class="fxList" id="fxList" role="listbox" aria-label="Effects"></div>
           <div class="fxSel" id="fxSel">
             <div class="fxSelHead"><div class="fxSelTxt"><b id="fxSelName">Choose an effect</b><small id="fxSelMeta"></small></div><span class="badge" id="fxSelBadge" data-s="UNVERIFIED">NOT TESTED</span></div>
@@ -97,6 +98,7 @@
             <div class="btnRow">
               <button class="btn main" id="fxRun" type="button">Run on strip</button>
               <button class="btn ghost" id="fxFav" type="button" aria-pressed="false">☆ Favourite</button>
+              <button class="btn ghost" id="fxQuick" type="button">Add to Quick Access</button>
               <button class="btn ghost" id="fxRename" type="button">Rename</button>
             </div>
             <label class="row" id="fxSpeedRow"><span>Effect speed</span><output id="spOut">50%</output><input id="sp" type="range" min="0" max="100" value="50"></label>
@@ -121,29 +123,35 @@
     <!-- MUSIC -->
     <section class="panel" id="tab-music" role="tabpanel" aria-labelledby="t-music" hidden>
       <div class="sect">
+        <div class="head"><h2>Smart Music Sync</h2></div>
         <button class="big" id="musicBtn" type="button">Start listening</button>
+        <label class="field"><span>Audio source</span><select id="musicSource" class="text"><option value="auto">Auto · prefer Device Audio</option><option value="device">Device Audio</option><option value="microphone">Microphone</option></select></label>
+        <p class="hint" id="musicNotice" role="status">Device Audio requires Android 10+, native app 1.2.0 and Android capture consent. Some apps prohibit capture. Microphone fallback is always your choice.</p>
+        <button id="musicFallback" class="btn ghost block" type="button" hidden>Use microphone instead</button>
+        <div class="musicInfo"><span id="musicActiveSource">Not capturing</span><span id="musicConnection">Bluetooth disconnected</span></div>
+        <canvas id="musicSpectrum" width="320" height="72" aria-label="Live analyzed audio spectrum"></canvas>
+        <div class="audioBands"><label>Bass<meter id="music-bass" min="0" max="1" value="0"></meter></label><label>Mid<meter id="music-mid" min="0" max="1" value="0"></meter></label><label>Treble<meter id="music-treble" min="0" max="1" value="0"></meter></label></div>
         <div class="meter" aria-hidden="true"><i id="meter"></i></div>
-        <p class="hint center">Uses the microphone. Only loudness is measured and nothing is stored. Works while the app is open.</p>
+        <p id="beatLamp" class="hint" aria-live="off">Not capturing</p>
       </div>
       <div class="sect">
-        <div class="head"><h2>Style</h2></div>
-        <div class="seg full" role="group" aria-label="Music style">
-          <button type="button" data-ms="pulse" aria-pressed="true">Pulse colour</button>
-          <button type="button" data-ms="spectrum" aria-pressed="false">Shift hue</button>
-          <button type="button" data-ms="dj" aria-pressed="false">DJ patterns</button>
+        <div class="head"><h2>Music style</h2></div>
+        <div class="seg full musicStyles" role="group" aria-label="Music style">
+          <button type="button" data-ms="smart" aria-pressed="true">Smart Auto</button>
+          <button type="button" data-ms="pulse" aria-pressed="false">Bass Pulse</button>
+          <button type="button" data-ms="spectrum" aria-pressed="false">Smooth Flow</button>
+          <button type="button" data-ms="dj" aria-pressed="false">DJ Scenes</button>
         </div>
-        <label class="row"><span>Sensitivity</span><output id="senOut">60%</output><input id="sen" type="range" min="5" max="100" value="60"></label>
+        <p id="djStatus" class="hint">DJ Scenes uses your selected scene/mode bank, then favourites or Quick Scenes. Effects stay on the controller between meaningful beats.</p>
+      </div>
+      <div class="sect"><details class="fine" id="musicAdvanced"><summary>Advanced Settings</summary>
+        <label class="row"><span>Manual sensitivity (Bass Pulse / Smooth Flow)</span><output id="senOut">60%</output><input id="sen" type="range" min="5" max="100" value="60"></label>
         <label class="row"><span>DJ minimum pattern time</span><output id="djIntervalOut">7 s</output><input id="djInterval" type="range" min="4" max="20" value="7"></label>
-        <p id="djStatus" class="hint">DJ patterns switch the strip’s built-in mode on strong beats. Favourite modes in Effects to build your own bank.</p>
-      </div>
-      <div class="sect">
-        <details class="fine"><summary>Beat detection</summary>
-          <p class="hint">Weak sound is filtered out and changes are rate limited.</p>
-          <label class="row"><span>Beat strength threshold</span><output id="beatGateOut">55%</output><input id="beatGate" type="range" min="10" max="100" value="55"></label>
-          <label class="row"><span>Minimum time between beats</span><output id="beatCooldownOut">360 ms</output><input id="beatCooldown" type="range" min="220" max="850" step="10" value="360"></label>
-          <p id="beatLamp" class="hint" aria-live="off">Beat count: 0</p>
-        </details>
-      </div>
+        <label class="row"><span>Beat strength threshold</span><output id="beatGateOut">55%</output><input id="beatGate" type="range" min="10" max="100" value="55"></label>
+        <label class="row"><span>Minimum time between beats</span><output id="beatCooldownOut">360 ms</output><input id="beatCooldown" type="range" min="220" max="850" step="10" value="360"></label>
+        <details class="fine"><summary>DJ scene / favourite mode bank</summary><div id="djBank" class="sceneChecks"></div></details>
+        <p class="hint">Smart Auto uses adaptive gain, frequency energy and onset detection, not genre recognition. Tempo is shown only when successive beat intervals are consistent.</p>
+      </details></div>
     </section>
 
     <!-- SETTINGS -->
@@ -234,18 +242,30 @@
       <div id="recentWrap" hidden><h3 class="sub">Recent</h3><div class="chips" id="recentList"></div></div>
     </div>
     <div class="sect">
-      <div class="head"><h2>All scenes</h2><button class="link" id="sceneReset" type="button">Reset to defaults</button></div>
-      <p class="hint">★ marks favourites: they come first in the scene row and show in Car mode.</p>
+      <div class="head"><h2>Custom app scenes</h2><button class="link" id="sceneReset" type="button">Reset to defaults</button></div>
+      <p class="hint">Saved app configurations such as Relax and Movie are preserved here. ★ adds a custom scene to Car mode; native hardware Movie is in Effects → Scenes.</p>
       <div class="list" id="sceneList"></div>
     </div>
   </div>
+</section>
+
+<section class="page" id="page-rotation" role="dialog" aria-modal="true" aria-labelledby="pt-rotation" hidden>
+  <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-rotation">Auto / Custom Rotation</h1></header>
+  <div class="pageBody"><div class="sect">
+    <p class="hint">Native hardware scenes only. Rotation needs MELK Studio in the foreground, a connection and Parked mode. When stopped, the last scene remains on the controller. This is separate from Magic Lantern Auto Play (mode 0).</p>
+    <label class="field"><span>Order</span><select id="rotationOrder" class="text"><option value="sequential">Sequential</option><option value="shuffle">Shuffle</option></select></label>
+    <label class="field"><span>Switch every</span><select id="rotationInterval" class="text"><option value="30000">30 seconds</option><option value="60000">1 minute</option><option value="300000">5 minutes</option><option value="900000">15 minutes</option></select></label>
+    <div id="rotationScenes" class="sceneChecks"></div>
+    <div class="btnRow"><button id="rotationStart" class="btn main" type="button">Start rotation</button><button id="rotationStop" class="btn ghost" type="button">Stop</button></div>
+    <p id="rotationStatus" class="hint" role="status">Stopped. Choose native scenes, then Start.</p>
+  </div></div>
 </section>
 
 <section class="page" id="page-automation" role="dialog" aria-modal="true" aria-labelledby="pt-automation" hidden>
   <header class="pageBar"><button class="back" type="button" data-back aria-label="Back">‹</button><h1 id="pt-automation">Automation &amp; timers</h1></header>
   <div class="pageBody">
     <div class="sect">
-      <div class="head"><h2>Auto scenes</h2></div>
+      <div class="head"><h2>Original Auto behaviour</h2></div><button id="legacyAuto" class="btn ghost block" type="button" aria-pressed="false">Toggle time-of-day / pattern Auto</button><button class="btn ghost block" type="button" data-open="rotation">Native scene rotation</button>
       <p class="hint">Auto (in the scene row) picks scenes by time of day, or rotates built-in patterns. Rotating needs the app open and connected.</p>
       <label class="field"><span>Auto behaviour</span><select class="text" id="autoStyle"><option value="time">Time of day (original)</option><option value="modes">Shuffle hardware patterns</option></select></label>
       <label class="row"><span>Pattern interval</span><output id="autoIntervalOut">45 s</output><input id="autoInterval" type="range" min="15" max="180" step="5" value="45"></label>
@@ -508,6 +528,9 @@
 <script src="js/sync-policy.js"></script>
 <script src="js/ble-native.js"></script>
 <script src="js/audio-native.js"></script>
+<script src="js/smart-audio.js"></script>
+<script src="js/smart-scenes.js"></script>
+<script src="js/smart-music.js"></script>
 <script src="js/scene-dna.js"></script>
 <script src="js/mode-catalog.js"></script>
 <script src="js/ota.js"></script>

@@ -57,11 +57,11 @@ test('no Roman Urdu is left in visible interface text', () => {
   const text = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ');
   assert.doesNotMatch(text, words); assert.doesNotMatch(jsFiles.replace(/\/\/.*$/gm, ''), words);
 });
-test('there is still one favourites store for scenes and one for modes (no new favourites system)', () => {
+test('there is still custom scene, native scene and numbered mode favourites are distinct and preserved', () => {
   const app = fs.readFileSync('www/js/app.js', 'utf8');
   const def = app.slice(app.indexOf('const DEF = {'), app.indexOf('\n  };', app.indexOf('const DEF = {')));
   const keys = [...def.matchAll(/\b(\w*[Ff]av\w*)\s*:/g)].map((m) => m[1]);
-  assert.deepEqual(keys.sort(), ['favScenes', 'modeFav']);
+  assert.deepEqual(keys.sort(), ['favScenes', 'modeFav', 'nativeSceneFav']);
 });
 test('modes and scenes use the same word for favourites (no "Star it" left)', () => {
   assert.doesNotMatch(fs.readFileSync('www/js/app.js', 'utf8'), /Star it|starred modes|Star scenes/);

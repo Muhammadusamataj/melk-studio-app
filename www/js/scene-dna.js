@@ -105,7 +105,7 @@
   const NUM = { h: [0, 360], s: [0, 1], br: [0, 100], speed: [0, 100], warm: [0, 100], flowSec: [5, 3600], fadeMs: [0, 10000], sunCap: [5, 60], dayBr: [0, 100],
     sens: [0, 100], djInterval: [1, 600], autoInterval: [5, 3600], beatGate: [0, 100], beatCooldown: [100, 2000], beatCountView: [0, 1e9], driveCap: [5, 100] };
   const BOOL = ['on', 'auto', 'carSeeded', 'nativeSeeded', 'verifyMigrated', 'sunDim', 'showAll', 'preserveHardware', 'persistentOnly', 'routineEnabled'];
-  const ENUM = { sunState: ['day', 'night'], tab: ['color', 'fx', 'music', 'studio'], musicStyle: ['pulse', 'spectrum', 'dj'], autoStyle: ['time', 'modes'], powerProfile: ['current', 'elk'], driveMode: ['driving', 'parked'] };
+  const ENUM = { sunState: ['day', 'night'], tab: ['color', 'fx', 'music', 'studio'], musicStyle: ['smart', 'pulse', 'spectrum', 'dj'], musicSource: ['auto', 'device', 'microphone'], autoStyle: ['time', 'modes'], powerProfile: ['current', 'elk'], driveMode: ['driving', 'parked'] };
   const ID = /^[A-Za-z0-9_-]{1,40}$/;
 
   function plain(v, depth) {            // bounded deep copy of loose data (routines etc.)
@@ -130,7 +130,7 @@
     if (sc.nativeScene !== undefined) { if (!knownScene(sc.nativeScene)) return null; o.nativeScene = sc.nativeScene; }
     if (sc.hardwareMode !== undefined) { if (!knownMode(sc.hardwareMode)) return null; o.hardwareMode = sc.hardwareMode; }
     if (sc.mode !== undefined) { if (!knownMode(sc.mode)) return null; o.mode = sc.mode; }
-    if (sc.style !== undefined) { if (!['pulse', 'spectrum', 'dj'].includes(sc.style)) return null; o.style = sc.style; }
+    if (sc.style !== undefined) { if (!['smart', 'pulse', 'spectrum', 'dj'].includes(sc.style)) return null; o.style = sc.style; }
     if (sc.note !== undefined) o.note = text(sc.note, 140);
     return o;
   }
@@ -155,6 +155,9 @@
       if (NUM[k]) { const n = clampNum(v, NUM[k][0], NUM[k][1]); if (n === null) ok = false; else settings[k] = n; }
       else if (BOOL.includes(k)) { if (typeof v === 'boolean') settings[k] = v; else ok = false; }
       else if (ENUM[k]) { if (ENUM[k].includes(v)) settings[k] = v; else ok = false; }
+      else if (k === 'smartScenes') { if (v === null) settings[k] = null; else if (isObj(v) && g.Melk.smartScenes) settings[k] = g.Melk.smartScenes.preferences(v); else ok = false; }
+      else if (k === 'nativeSceneFav') { if (Array.isArray(v) && v.length <= 28 && v.every(knownScene)) settings[k] = [...new Set(v)]; else ok = false; }
+      else if (k === 'djBank') { if (Array.isArray(v) && v.length <= 241 && v.every(x => typeof x === 'string' && (/^s\d+$/.test(x) ? knownScene(+x.slice(1)) : /^m\d+$/.test(x) && knownMode(+x.slice(1))))) settings[k] = [...new Set(v)]; else ok = false; }
       else if (k === 'palette') { if (Array.isArray(v) && v.length <= 64 && v.every((x) => hex(x))) settings.palette = v.map(hex); else ok = false; }
       else if (k === 'scenes') { if (v === null) settings.scenes = null; else if (Array.isArray(v) && v.length <= 64) { const a = v.map(internalScene); if (a.every(Boolean)) settings.scenes = a; else ok = false; } else ok = false; }
       else if (k === 'seqs') { if (v === null) settings.seqs = null; else if (Array.isArray(v) && v.length <= 64) { const a = v.map(internalSeq); if (a.every(Boolean)) settings.seqs = a; else ok = false; } else ok = false; }
