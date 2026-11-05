@@ -46,8 +46,13 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Microphone capture is unavailable in this browser.');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     if (my !== generation) { stream.getTracks().forEach(t => t.stop()); throw new Error('Audio start cancelled'); }
-    const ctx = new (g.AudioContext || g.webkitAudioContext)(), an = ctx.createAnalyser();
-    an.fftSize = 2048; an.smoothingTimeConstant = .4; ctx.createMediaStreamSource(stream).connect(an);
+    let ctx, an;
+    try {
+      ctx = new (g.AudioContext || g.webkitAudioContext)(); an = ctx.createAnalyser();
+      an.fftSize = 2048; an.smoothingTimeConstant = .4; ctx.createMediaStreamSource(stream).connect(an);
+    } catch (e) {
+      stream.getTracks().forEach(t => t.stop()); if (ctx) await ctx.close().catch(() => {}); throw e;
+    }
     const pcm = new Float32Array(2048), bins = new Float32Array(1024), previous = new Float32Array(1024);
     let peak = .02, floor = .0002, fluxMean = .001, lastBeat = -10000, quietSince = 0;
     const timer = setInterval(() => {

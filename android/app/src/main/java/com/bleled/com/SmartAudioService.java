@@ -56,7 +56,8 @@ public class SmartAudioService extends Service {
                 Intent consent = Build.VERSION.SDK_INT >= 33 ? intent.getParcelableExtra("consent", Intent.class) : intent.getParcelableExtra("consent");
                 projection = getSystemService(MediaProjectionManager.class).getMediaProjection(intent.getIntExtra("resultCode", Activity.RESULT_CANCELED), consent);
                 if (projection == null) throw new IllegalStateException("Screen capture consent was not granted");
-                projection.registerCallback(new MediaProjection.Callback() { @Override public void onStop() { stopCapture("Device capture was revoked. Tap Start for fresh consent."); stopSelf(); } }, main);
+                final MediaProjection captureProjection = projection;
+                projection.registerCallback(new MediaProjection.Callback() { @Override public void onStop() { if (projection == captureProjection) { stopCapture("Device capture was revoked. Tap Start for fresh consent."); stopSelf(); } } }, main);
                 AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(projection)
                     .addMatchingUsage(AudioAttributes.USAGE_MEDIA).addMatchingUsage(AudioAttributes.USAGE_GAME).addMatchingUsage(AudioAttributes.USAGE_UNKNOWN).build();
                 audio.setAudioPlaybackCaptureConfig(config);
@@ -66,27 +67,28 @@ public class SmartAudioService extends Service {
             recorder.startRecording();
             if (recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) throw new IllegalStateException("Audio input is busy or restricted");
             running = true; final AudioRecord session = recorder;
+            final Listener captureListener = sessionListener; final String captureSource = source;
             readerStarted = true;
             Listener l = sessionListener; if (l != null) l.started(source);
-            new Thread(() -> capture(session), "MELK-Smart-Audio").start();
+            new Thread(() -> capture(session, captureListener, captureSource), "MELK-Smart-Audio").start();
         } catch (Exception e) { stopCapture("Audio capture unavailable: " + e.getMessage()); stopSelf(); }
         return START_NOT_STICKY;
     }
-    private void capture(AudioRecord session) {
+    private void capture(AudioRecord session, Listener captureListener, String captureSource) {
         AudioAnalysis analysis = new AudioAnalysis(); short[] pcm = new short[AudioAnalysis.SIZE]; int offset = 0; long last = 0; boolean pendingBeat = false;
         try {
             while (running && recorder == session) {
                 int n = session.read(pcm, offset, pcm.length - offset, AudioRecord.READ_BLOCKING);
-                if (n < 0) throw new IllegalStateException("Audio input stopped");
+                if (n <= 0) throw new IllegalStateException("Audio input stopped");
                 offset += n;
                 if (offset != pcm.length) continue;
                 offset = 0; long now = SystemClock.elapsedRealtime();
                 AudioAnalysis.Frame f = analysis.analyze(pcm, now);
                 pendingBeat |= f.beat;
                 // FFT works at ~21 frames/s; the bridge/UI receives at most ~11 frames/s.
-                if (now - last >= 80) { last = now; f.beat = pendingBeat; pendingBeat = false; Listener l = sessionListener; if (running && recorder == session && l != null) l.frame(f, source); }
+                if (now - last >= 80) { last = now; f.beat = pendingBeat; pendingBeat = false; if (running && recorder == session && captureListener != null) captureListener.frame(f, captureSource); }
             }
-        } catch (Exception e) { main.post(() -> { stopCapture("Audio capture interrupted. Tap Start to retry."); stopSelf(); }); }
+        } catch (Exception e) { main.post(() -> { if (recorder == session) { stopCapture("Audio capture interrupted. Tap Start to retry."); stopSelf(); } }); }
         finally { try { session.release(); } catch (Exception ignored) {} }
     }
     private synchronized void stopCapture(String reason) {

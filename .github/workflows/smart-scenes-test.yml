@@ -34,6 +34,13 @@ jobs:
         run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-daemon
       - name: Verify actual APK metadata and signature
         run: python3 tools/verify-test-apk.py
+      - name: Prepare unpublished compatible web bundle
+        run: python3 tools/make-ota.py 1.2.0 https://muhammadusamataj.github.io/melk-studio-ota-/ota/
+      - name: Upload unpublished web staging files
+        uses: actions/upload-artifact@v4
+        with:
+          name: UNPUBLISHED-web-v1.2.0-${{ github.run_id }}
+          path: ota-out/
       - name: Upload installable test APK and verified facts
         uses: actions/upload-artifact@v4
         with:

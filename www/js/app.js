@@ -223,6 +223,9 @@
     $('#flowBtn').textContent = 'Start';
     const mb = $('#musicBtn'); mb.setAttribute('aria-pressed', 'false'); mb.textContent = 'Start listening';
     $('#meter').style.width = '0';
+    if ($('#musicSpectrum')) $('#musicSpectrum').getContext('2d').clearRect(0, 0, 320, 72);
+    for (const band of ['bass', 'mid', 'treble']) if ($('#music-' + band)) $('#music-' + band).value = 0;
+    if ($('#musicActiveSource')) $('#musicActiveSource').textContent = 'Not capturing';
   }
   function setColor(h, s, fromUser) {
     if (fromUser) { stopDriver(); activeMode = null; activeScene = null; renderModes(); renderScenes(); }
@@ -1626,6 +1629,12 @@
   }
 
   function renderAll() {
+    S.smartScenes = Melk.smartScenes.preferences(S.smartScenes);
+    if (rotation) rotation.configure(S.smartScenes);
+    $('#musicSource').value = S.musicSource;
+    $('#rotationInterval').value = S.smartScenes.interval; $('#rotationOrder').value = S.smartScenes.order;
+    $$('#rotationScenes input').forEach(e => { e.checked = S.smartScenes.selected.includes(+e.value); });
+    renderDjBank();
     $('#sp').value = S.speed; $('#spOut').textContent = S.speed + '%'; $('#sen').value = S.sens; $('#senOut').textContent = S.sens + '%';
     $('#warm').value = S.warm; $('#flowSec').value = S.flowSec; $('#flowOut').textContent = fmtSec(S.flowSec); $('#showAll').checked = !!S.showAll;
     $$('#fadeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.fade === S.fadeMs)));
@@ -1636,7 +1645,7 @@
   rotation = Melk.smartScenes.create({ preferences: S.smartScenes,
     canRun: () => link.ready && !document.hidden && S.driveMode !== 'driving',
     send: id => { rotationSending = true; try { return sendNativeScene(id); } finally { rotationSending = false; } },
-    onChange: status => { const el = $('#rotationStatus'); if (el) el.textContent = status.running ? 'Rotating · Last requested: ' + (P.NATIVE_SCENES[status.current] || 'starting') + ' · Next: ' + (P.NATIVE_SCENES[status.next] || '—') : 'Stopped. The last native scene is left on the controller.'; const b = $('#rotationStart'); if (b) b.textContent = status.running ? 'Restart rotation' : 'Start rotation'; }
+    onChange: status => { const el = $('#rotationStatus'); if (el) el.textContent = status.running ? 'Rotating · Last requested: ' + (P.NATIVE_SCENES[status.current] || 'starting') + ' · Next: ' + (P.NATIVE_SCENES[status.next] || '—') : 'Stopped. The last native scene is left on the controller.'; const b = $('#rotationStart'); if (b) b.textContent = status.running ? 'Restart rotation' : 'Start rotation'; const quick = $('#scenes button'); if (quick) quick.textContent = status.running ? 'Auto · Running' : 'Auto'; }
   });
   function editQuickScenes() {
     if (S.driveMode === 'driving') return toast('Edit Quick Scenes while parked.');
@@ -1654,7 +1663,9 @@
   $('#rotationStop').addEventListener('click', () => rotation.stop());
   link.addEventListener('state', () => { if (!link.ready) { rotation.stop(); if (driver && driver.label === 'Listening…') stopDriver(); } });
   $('#legacyAuto').addEventListener('click', () => { if (!link.ready || S.driveMode === 'driving') return toast('Connect the strip while parked first.'); const enabled = !S.auto; stopDriver(); S.auto = enabled; save(); lastAuto = null; if (enabled) runAuto(true); $('#legacyAuto').setAttribute('aria-pressed', String(S.auto)); });
-  $('#djBank').innerHTML = Object.keys(P.NATIVE_SCENES).map(id => '<label class="check"><input type="checkbox" value="s' + id + '" ' + ((S.djBank || []).includes('s' + id) ? 'checked' : '') + '><span>Native ' + esc(P.NATIVE_SCENES[id]) + '</span></label>').join('') + Object.keys(S.modeFav).filter(id => S.modeFav[id] && P.isKnownMode(+id)).map(id => '<label class="check"><input type="checkbox" value="m' + id + '" ' + ((S.djBank || []).includes('m' + id) ? 'checked' : '') + '><span>' + esc(modeLabel(+id)) + '</span></label>').join('');
+  function renderDjBank() { $('#djBank').innerHTML = Object.keys(P.NATIVE_SCENES).map(id => '<label class="check"><input type="checkbox" value="s' + id + '" ' + ((S.djBank || []).includes('s' + id) ? 'checked' : '') + '><span>Native ' + esc(P.NATIVE_SCENES[id]) + '</span></label>').join('') + Object.keys(S.modeFav).filter(id => S.modeFav[id] && P.isKnownMode(+id)).map(id => '<label class="check"><input type="checkbox" value="m' + id + '" ' + ((S.djBank || []).includes('m' + id) ? 'checked' : '') + '><span>' + esc(modeLabel(+id)) + '</span></label>').join('');
+  }
+  $('#musicAdvanced').addEventListener('toggle', renderDjBank);
   $('#djBank').addEventListener('change', () => { S.djBank = $$('#djBank input:checked').map(e => e.value); save(); });
   renderAll();
   runHash();

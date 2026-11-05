@@ -74,7 +74,7 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         JSObject o = new JSObject(); o.put("source", source); o.put("rms", f.rms); o.put("energy", f.energy);
         o.put("bass", f.bass); o.put("mid", f.mid); o.put("treble", f.treble); o.put("beat", f.beat); o.put("silence", f.silence);
         o.put("noiseFloor", f.noiseFloor); o.put("bpm", f.bpm); o.put("confidence", f.confidence);
-        JSArray bins = new JSArray(), wave = new JSArray(); for (double v : f.spectrum) bins.put(v); for (double v : f.waveform) wave.put(v);
+        JSArray bins = JSArray.from(f.spectrum), wave = JSArray.from(f.waveform);
         o.put("spectrum", bins); o.put("waveform", wave); notifyListeners("frame", o);
     }
     @Override public void stopped(String reason) {

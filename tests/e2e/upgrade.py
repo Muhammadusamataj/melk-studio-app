@@ -37,6 +37,8 @@ async def main():
         check('the Rainbow candidate you verified in 1.1.5 is still VERIFIED_SUPPORTED', await pg.get_attribute('.rb[data-key="mode:103"]', 'data-s') == 'VERIFIED_SUPPORTED' and (await pg.inner_text('#hwRbStatus')) == 'VERIFIED_SUPPORTED')
         await pg.click('#page-lab [data-back]')
         await pg.click('#t-fx'); await pg.wait_for_timeout(150)
+        check('upgraded installs open the native Scenes category', await pg.get_attribute('#fxCats [data-cat=scenes]', 'aria-selected') == 'true')
+        await pg.click('#fxCats [data-cat=fav]')
         tiles = await pg.eval_on_selector_all('#fxList .fxName', 'e=>e.map(x=>x.firstChild.textContent)')
         check('a renamed favourite mode keeps its name and is what the list opens on (Favourites)', tiles == ['My flow'] and await pg.get_attribute('#fxCats [data-cat=fav]', 'aria-selected') == 'true', tiles[:6])
         await pg.click('#t-music')
