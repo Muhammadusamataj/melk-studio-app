@@ -47,6 +47,8 @@ jobs:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - run: npm ci && npm test && npm run test:tools && npx cap sync android
+      - name: Inspect the app's public feeds without publishing
+        run: python3 tools/audit-update-feeds.py --out updater-ci-evidence/feed-audit.json
       - name: Build two releases with ONE CI-only key; verify compatibility and mismatch blocking
         run: python3 tools/updater-ci-smoke.py
       - uses: actions/upload-artifact@v4
