@@ -13,7 +13,9 @@
         const bank = (o.bank || []).filter(x => x !== lastKey);
         const choices = bank.length ? bank : o.bank || [];
         if (!choices.length) return null;
-        lastKey = choices[Math.floor((o.random || Math.random)() * choices.length)]; lastDJ = now;
+        const nextKey = choices[Math.floor((o.random || Math.random)() * choices.length)];
+        if (nextKey === lastKey) return null;
+        lastKey = nextKey; lastDJ = now;
         return { kind: 'native', key: lastKey };
       }
       // Silence gently approaches a low steady level. No random changes or writes at audio sample rate.

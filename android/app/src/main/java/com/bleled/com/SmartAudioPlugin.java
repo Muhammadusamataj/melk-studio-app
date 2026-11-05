@@ -24,6 +24,9 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         JSObject o = new JSObject(); o.put("apiVersion", 2); o.put("playback", Build.VERSION.SDK_INT >= 29); o.put("microphone", true); call.resolve(o);
     }
     @PluginMethod public void start(PluginCall call) {
+        getActivity().runOnUiThread(() -> startOnMain(call));
+    }
+    private void startOnMain(PluginCall call) {
         if (pending != null || active) { call.reject("Stop the current audio session first", "BUSY"); return; }
         requested = call.getString("source", "device");
         if (!"device".equals(requested) && !"microphone".equals(requested)) { call.reject("Choose Device Audio or Microphone", "BAD_SOURCE"); return; }
@@ -39,11 +42,13 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         else notifications(call);
     }
     private void notifications(PluginCall call) {
+        if (pending != call) return;
         if (Build.VERSION.SDK_INT >= 33 && getPermissionState("notifications") != PermissionState.GRANTED) requestPermissionForAlias("notifications", call, "notificationPermission");
         else consent(call);
     }
     @PermissionCallback private void notificationPermission(PluginCall call) { if (pending == call) consent(call); }
     private void consent(PluginCall call) {
+        if (pending != call) return;
         if ("device".equals(requested)) {
             MediaProjectionManager manager = getContext().getSystemService(MediaProjectionManager.class);
             startActivityForResult(call, manager.createScreenCaptureIntent(), "projectionConsent");
@@ -55,6 +60,7 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         launch(result.getData(), result.getResultCode());
     }
     private void launch(Intent consent, int resultCode) {
+        if (pending == null) return;
         final int my = generation;
         SmartAudioService.listener = new SmartAudioService.Listener() {
             @Override public void started(String source) { if (my == generation) SmartAudioPlugin.this.started(source); }
@@ -82,7 +88,7 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         if (call != null) call.reject(reason, "CAPTURE_FAILED");
         JSObject o = new JSObject(); o.put("message", reason); notifyListeners("stopped", o);
     }
-    @PluginMethod public void stop(PluginCall call) { stopSession(); call.resolve(); }
+    @PluginMethod public void stop(PluginCall call) { getActivity().runOnUiThread(() -> { stopSession(); call.resolve(); }); }
     private void stopSession() {
         generation++;
         PluginCall call = pending; pending = null;
@@ -90,6 +96,13 @@ public class SmartAudioPlugin extends Plugin implements SmartAudioService.Listen
         active = false; getContext().stopService(new Intent(getContext(), SmartAudioService.class));
     }
     // Foreground-only product policy. Consent UI may pause the activity while pending; do not cancel that prompt.
-    @Override protected void handleOnStop() { if (active) stopSession(); }
+    @Override protected void handleOnStop() {
+        if (active) {
+            stopSession();
+            JSObject event = new JSObject(); event.put("message", "Capture paused in the background. Tap Start for fresh consent.");
+            notifyListeners("stopped", event);
+        }
+        super.handleOnStop();
+    }
     @Override protected void handleOnDestroy() { stopSession(); SmartAudioService.listener = null; super.handleOnDestroy(); }
 }

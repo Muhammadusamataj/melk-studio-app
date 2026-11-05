@@ -17,4 +17,9 @@ test('DJ Scenes requires beats, respects minimum duration and avoids restarting 
 test('manual Bass Pulse and Smooth Flow remain available',()=>{
  for(const style of ['pulse','spectrum']){const d=engine().frame({bass:.5,energy:.5},{...opts,style},1000);assert.equal(d.kind,'color');}
 });
+test('a one-effect DJ bank does not repeatedly restart its native effect',()=>{
+ const e=engine(),o={...opts,style:'dj',bank:['s4']};
+ assert.equal(e.frame({bass:1,beat:true},o,0).key,'s4');
+ assert.equal(e.frame({bass:1,beat:true},o,10000),null);
+});
 test('invalid frames are ignored',()=>{assert.equal(engine().frame(null,opts,0),null);assert.equal(engine().frame({bass:'invalid'},opts,0),null);});

@@ -3,6 +3,13 @@ name: Smart Scenes v1.2.0 test APK
 on:
   push:
     branches: [feature/smart-scenes-audio-sync]
+    paths:
+      - 'android/**'
+      - 'www/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'package*.json'
+      - '.github/workflows/smart-scenes-test.yml'
   workflow_dispatch:
 
 permissions:
