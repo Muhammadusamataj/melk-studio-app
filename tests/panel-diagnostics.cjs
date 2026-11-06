@@ -16,8 +16,10 @@ test('panel diagnostics loads before application scripts and marks ready', () =>
 
 test('panel diagnostics captures startup errors without requiring modern browser APIs', () => {
   const handlers = {};
+  const domHandlers = {};
   const elements = [];
   const doc = {
+    addEventListener(type, cb) { domHandlers[type] = cb; },
     body: { appendChild(el) { elements.push(el); } },
     createElement() { return { style: {}, setAttribute() {}, textContent: '' }; },
   };
@@ -32,6 +34,7 @@ test('panel diagnostics captures startup errors without requiring modern browser
   assert.match(elements[0].textContent, /app\.js:20/);
   win.MelkPanelDiagnostics.ready();
   assert.equal(typeof win.MelkPanelDiagnostics.report, 'function');
+  assert.equal(typeof domHandlers.DOMContentLoaded, 'function');
 });
 
 test('Android 8.1 BLE discovery declares legacy permissions without widening Android 12+ scope', () => {
@@ -40,4 +43,20 @@ test('Android 8.1 BLE discovery declares legacy permissions without widening And
     assert.match(manifest, new RegExp('android:name="android\\.permission\\.' + permission + '" android:maxSdkVersion="30"'));
   }
   assert.match(manifest, /android\.permission\.BLUETOOTH_SCAN/);
+});
+
+test('errors reported before the body exists become visible on DOMContentLoaded', () => {
+  const listeners = {};
+  const doc = {
+    body: null,
+    addEventListener(name, fn) { listeners[name] = fn; },
+    createElement() { return { style: {}, setAttribute() {}, textContent: '' }; },
+  };
+  const win = { addEventListener(name, fn) { listeners[name] = fn; }, setTimeout() {} };
+  vm.runInNewContext(source, { window: win, document: doc, String });
+  listeners.error({ message: 'Old WebView syntax error', filename: 'app.js', lineno: 1 });
+  let element;
+  doc.body = { appendChild(node) { element = node; } };
+  listeners.DOMContentLoaded();
+  assert.match(element.textContent, /Old WebView syntax error/);
 });
