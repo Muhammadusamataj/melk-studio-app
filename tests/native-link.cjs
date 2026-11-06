@@ -21,10 +21,10 @@ function setup() {
   return { link: new context.Melk.Link(), plugin, calls, P: context.Melk.protocol };
 }
 
-test('native scan respects filtered and show-all selection', async () => {
+test('native scan shows all nearby devices regardless of old prefix preference', async () => {
   const {link,calls,P} = setup();
   await link.connect(false);
-  assert.equal(calls[0].namePrefix, P.NAME_PREFIX);
+  assert.equal(Object.keys(calls[0]).length, 0);
   await link.disconnect();
   await link.connect(true);
   assert.equal(Object.keys(calls[1]).length, 0);
