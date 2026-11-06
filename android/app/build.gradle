@@ -52,6 +52,10 @@ android {
     }
     buildTypes {
         debug {
+            // CI diagnostic only: separate package, so the user's installed app is untouched.
+            if (project.hasProperty('melkPanelSideBySide') && project.property('melkPanelSideBySide') == 'true') {
+                applicationIdSuffix '.paneldiag'
+            }
             if (keystorePropsFile.exists()) signingConfig signingConfigs.melk
         }
         release {
