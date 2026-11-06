@@ -33,3 +33,11 @@ test('panel diagnostics captures startup errors without requiring modern browser
   win.MelkPanelDiagnostics.ready();
   assert.equal(typeof win.MelkPanelDiagnostics.report, 'function');
 });
+
+test('Android 8.1 BLE discovery declares legacy permissions without widening Android 12+ scope', () => {
+  const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+  for (const permission of ['BLUETOOTH', 'BLUETOOTH_ADMIN', 'ACCESS_FINE_LOCATION']) {
+    assert.match(manifest, new RegExp('android:name="android\\.permission\\.' + permission + '" android:maxSdkVersion="30"'));
+  }
+  assert.match(manifest, /android\.permission\.BLUETOOTH_SCAN/);
+});
