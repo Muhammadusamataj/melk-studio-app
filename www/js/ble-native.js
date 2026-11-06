@@ -109,7 +109,7 @@
       this._set('connecting');
       try {
         await this._init();      // asks for Bluetooth permission if not yet granted
-        const dev = await ble().requestDevice(showAll ? {} : { namePrefix: P.NAME_PREFIX });
+        // Native Android picker should show all nearby BLE devices. Some controllers advertise\n        // a different name (or no name), so the web-only prefix filter hides them.\n        const dev = await ble().requestDevice({});
         const id = dev && (dev.deviceId || dev.id);
         if (!id) throw new Error('No device was selected. Please try again.');
         await this._open(id, dev.name);
