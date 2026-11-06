@@ -19,6 +19,7 @@
     }
     panel.textContent = 'MELK Studio startup diagnostic (Android panel)\n' + errors.join('\n') + '\n\nTake a photo of this message and send it for debugging.';
   }
+  d.addEventListener('DOMContentLoaded', function () { if (errors.length) show(); });
   w.addEventListener('error', function (e) {
     add((e.message || 'Script load error') + (e.filename ? ' [' + e.filename.split('/').pop() + ':' + e.lineno + ']' : ''));
   });
@@ -32,6 +33,6 @@
     errors: errors
   };
   w.setTimeout(function () {
-    if (!ready && !errors.length) add('App did not finish initialization. Check script compatibility and native plugins.');
+    if (!ready) add('App did not finish initialization. Check script compatibility and native plugins.');
   }, 7000);
 })(window, document);
