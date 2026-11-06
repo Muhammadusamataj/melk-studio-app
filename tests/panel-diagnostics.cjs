@@ -69,3 +69,21 @@ test('diagnostic APK has a separate package id only when explicitly requested', 
   assert.match(workflow, /-PmelkPanelSideBySide=true/);
   assert.match(workflow, /com\.bleled\.com\.paneldiag/);
 });
+
+test('BLE Link constructs and dispatches events on Android 8.1 WebView with illegal EventTarget constructor', () => {
+  const bleSource = fs.readFileSync('www/js/ble.js', 'utf8');
+  class BrokenEventTarget { constructor() { throw new TypeError('Illegal constructor'); } }
+  const win = { Melk: { protocol: {} } };
+  vm.runInNewContext(bleSource, { window: win, EventTarget: BrokenEventTarget, navigator: {} });
+  const link = new win.Melk.Link();
+  let seen = 0;
+  const listener = (e) => { if (e.detail.state === 'demo') seen++; };
+  link.addEventListener('state', listener);
+  // Older WebView supports CustomEvent; test its detail contract independently.
+  const CustomEvent = function(type, options) { this.type = type; this.detail = options && options.detail; };
+  link.dispatchEvent(new CustomEvent('state', { detail: { state: 'demo' } }));
+  link.removeEventListener('state', listener);
+  link.dispatchEvent(new CustomEvent('state', { detail: { state: 'demo' } }));
+  assert.equal(seen, 1);
+  assert.equal(link.state, 'idle');
+});
