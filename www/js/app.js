@@ -990,7 +990,14 @@
     if (link.state === 'connecting' && !link.reconnecting) return;   // native: a tap during auto-reconnect starts a fresh connect
     if (!link.supported) { link.startDemo(); return toast('No Web Bluetooth here. Demo mode is on.'); }
     try { await link.connect(S.showAll); toast('Connected to ' + link.name); }
-    catch (err) { if (err && err.name !== 'NotFoundError') { const m = friendlyError(err); toast(m); noteFail(m); } }
+    catch (err) {
+      // A missing/cancelled native picker must not fail silently on old Android panels.
+      const raw = String((err && err.message) || err || 'Unknown Bluetooth error');
+      const m = err && err.name === 'NotFoundError'
+        ? 'No strip selected. On Android 8.1, enable Location in quick settings, allow Location permission, then try Connect strip again. (' + raw + ')'
+        : friendlyError(err) + ' (' + raw + ')';
+      toast(m); noteFail(m);
+    }
   });
 
   /* ---------- tabs ---------- */
