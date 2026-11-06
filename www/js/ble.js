@@ -4,7 +4,33 @@
   const P = g.Melk.protocol;
   const RETRY_MS = [800, 1500, 3000, 5000, 8000, 12000];
 
-  class Link extends EventTarget {
+  // Android 8.1 WebView 61 exposes EventTarget but throws "Illegal constructor"
+  // when subclassed. A small local event dispatcher works on old and new WebViews.
+  class LinkEvents {
+    constructor() { this._listeners = {}; }
+    addEventListener(type, listener) {
+      if (!listener) return;
+      if (!this._listeners[type]) this._listeners[type] = [];
+      if (this._listeners[type].indexOf(listener) < 0) this._listeners[type].push(listener);
+    }
+    removeEventListener(type, listener) {
+      const list = this._listeners[type];
+      if (!list) return;
+      const index = list.indexOf(listener);
+      if (index >= 0) list.splice(index, 1);
+    }
+    dispatchEvent(event) {
+      if (!event || !event.type) throw new TypeError('Event type is required');
+      const list = (this._listeners[event.type] || []).slice();
+      for (const listener of list) {
+        if (typeof listener === 'function') listener.call(this, event);
+        else if (listener && typeof listener.handleEvent === 'function') listener.handleEvent(event);
+      }
+      return !event.defaultPrevented;
+    }
+  }
+
+  class Link extends LinkEvents {
     constructor() {
       super();
       this.state = 'idle'; // idle | connecting | connected | demo

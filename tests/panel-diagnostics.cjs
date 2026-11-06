@@ -1,0 +1,98 @@
+/* Android 8.1 panel startup diagnostic wiring regression checks. */
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+
+const html = fs.readFileSync('www/index.html', 'utf8');
+const source = fs.readFileSync('www/js/panel-diagnostics.js', 'utf8');
+const app = fs.readFileSync('www/js/app.js', 'utf8');
+
+test('panel diagnostics loads before application scripts and marks ready', () => {
+  assert.ok(html.indexOf('js/panel-diagnostics.js') < html.indexOf('js/protocol.js'));
+  assert.ok(html.indexOf('js/panel-diagnostics.js') > -1);
+  assert.match(app, /MelkPanelDiagnostics\.ready\(\)/);
+});
+
+test('panel diagnostics captures startup errors without requiring modern browser APIs', () => {
+  const handlers = {};
+  const domHandlers = {};
+  const elements = [];
+  const doc = {
+    addEventListener(type, cb) { domHandlers[type] = cb; },
+    body: { appendChild(el) { elements.push(el); } },
+    createElement() { return { style: {}, setAttribute() {}, textContent: '' }; },
+  };
+  const win = {
+    addEventListener(type, cb) { handlers[type] = cb; },
+    setTimeout() {},
+  };
+  vm.runInNewContext(source, { window: win, document: doc, String });
+  handlers.error({ message: 'Unexpected token', filename: 'file:///android_asset/public/js/app.js', lineno: 20 });
+  assert.equal(elements.length, 1);
+  assert.match(elements[0].textContent, /Unexpected token/);
+  assert.match(elements[0].textContent, /app\.js:20/);
+  win.MelkPanelDiagnostics.ready();
+  assert.equal(typeof win.MelkPanelDiagnostics.report, 'function');
+  assert.equal(typeof domHandlers.DOMContentLoaded, 'function');
+});
+
+test('Android 8.1 BLE discovery declares legacy permissions without widening Android 12+ scope', () => {
+  const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+  for (const permission of ['BLUETOOTH', 'BLUETOOTH_ADMIN', 'ACCESS_FINE_LOCATION']) {
+    assert.match(manifest, new RegExp('android:name="android\\.permission\\.' + permission + '" android:maxSdkVersion="30"'));
+  }
+  assert.match(manifest, /android\.permission\.BLUETOOTH_SCAN/);
+});
+
+test('errors reported before the body exists become visible on DOMContentLoaded', () => {
+  const listeners = {};
+  const doc = {
+    body: null,
+    addEventListener(name, fn) { listeners[name] = fn; },
+    createElement() { return { style: {}, setAttribute() {}, textContent: '' }; },
+  };
+  const win = { addEventListener(name, fn) { listeners[name] = fn; }, setTimeout() {} };
+  vm.runInNewContext(source, { window: win, document: doc, String });
+  listeners.error({ message: 'Old WebView syntax error', filename: 'app.js', lineno: 1 });
+  let element;
+  doc.body = { appendChild(node) { element = node; } };
+  listeners.DOMContentLoaded();
+  assert.match(element.textContent, /Old WebView syntax error/);
+});
+
+test('diagnostic APK has a separate package id only when explicitly requested', () => {
+  const gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+  const workflow = fs.readFileSync('.github/workflows/android81-panel.yml', 'utf8');
+  assert.match(gradle, /project\.hasProperty\('melkPanelSideBySide'\)/);
+  assert.match(gradle, /applicationIdSuffix '\.paneldiag'/);
+  assert.match(workflow, /-PmelkPanelSideBySide=true/);
+  assert.match(workflow, /com\.bleled\.com\.paneldiag/);
+});
+
+test('BLE Link constructs and dispatches events on Android 8.1 WebView with illegal EventTarget constructor', () => {
+  const bleSource = fs.readFileSync('www/js/ble.js', 'utf8');
+  class BrokenEventTarget { constructor() { throw new TypeError('Illegal constructor'); } }
+  const win = { Melk: { protocol: {} } };
+  vm.runInNewContext(bleSource, { window: win, EventTarget: BrokenEventTarget, navigator: {} });
+  const link = new win.Melk.Link();
+  let seen = 0;
+  const listener = (e) => { if (e.detail.state === 'demo') seen++; };
+  link.addEventListener('state', listener);
+  // Older WebView supports CustomEvent; test its detail contract independently.
+  const CustomEvent = function(type, options) { this.type = type; this.detail = options && options.detail; };
+  link.dispatchEvent(new CustomEvent('state', { detail: { state: 'demo' } }));
+  link.removeEventListener('state', listener);
+  link.dispatchEvent(new CustomEvent('state', { detail: { state: 'demo' } }));
+  assert.equal(seen, 1);
+  assert.equal(link.state, 'idle');
+});
+
+test('native BLE picker scans all devices and connection errors are visible', () => {
+  const native = fs.readFileSync('www/js/ble-native.js', 'utf8');
+  const app = fs.readFileSync('www/js/app.js', 'utf8');
+  assert.match(native, /await ble\(\)\.requestDevice\(\{\}\)/);
+  assert.doesNotMatch(native, /requestDevice\(showAll \?/);
+  assert.match(app, /No strip selected\. On Android 8\.1/);
+  assert.match(app, /toast\(m\); noteFail\(m\)/);
+});

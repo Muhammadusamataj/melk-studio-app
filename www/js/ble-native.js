@@ -42,6 +42,8 @@
     }
     get supported() { return true; }
 
+    _stage(label) { this.dispatchEvent(new CustomEvent('scan-stage', { detail: label })); }
+
     async _init() {
       const p = ble();
       await p.initialize({ androidNeverForLocation: true });
@@ -108,12 +110,19 @@
       this._manual = false;
       this._set('connecting');
       try {
+        this._stage('Checking Bluetooth permissions and adapter');
         await this._init();      // asks for Bluetooth permission if not yet granted
-        const dev = await ble().requestDevice(showAll ? {} : { namePrefix: P.NAME_PREFIX });
+        this._stage('Opening Android BLE device picker');
+        // Native Android picker should show all nearby BLE devices. Some controllers advertise
+        // a different name (or no name), so the web-only prefix filter hides them.
+        const dev = await ble().requestDevice({});
+        this._stage('Device selected; preparing connection');
         const id = dev && (dev.deviceId || dev.id);
         if (!id) throw new Error('No device was selected. Please try again.');
         await this._open(id, dev.name);
+        this._stage('Connected');
       } catch (e) {
+        this._stage('BLE failed: ' + ((e && e.message) || String(e)));
         this._set('idle', '');
         const msg = (e && e.message) || '';
         // Let the UI report failure; a cancelled picker must never say Connected.

@@ -959,6 +959,30 @@
   link.addEventListener('restored', () => toast('Reconnected'));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) link.resume(); });
 
+  /* Permanent panel BLE status: Android 8.1 can dismiss native pickers without a visible error. */
+  const blePanelStatus = document.createElement('div');
+  blePanelStatus.id = 'melkBlePanelStatus';
+  blePanelStatus.setAttribute('role', 'status');
+  blePanelStatus.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483000;padding:12px 40px 12px 12px;background:#172336;color:#fff;border:1px solid #77b8ff;border-radius:10px;font:15px/1.4 sans-serif;box-shadow:0 4px 18px #0008;display:none;white-space:pre-wrap';
+  const bleStatusClose = document.createElement('button');
+  bleStatusClose.textContent = '×';
+  bleStatusClose.setAttribute('aria-label', 'Dismiss Bluetooth status');
+  bleStatusClose.style.cssText = 'position:absolute;right:8px;top:4px;color:white;background:transparent;border:0;font-size:28px';
+  bleStatusClose.addEventListener('click', () => { blePanelStatus.style.display = 'none'; });
+  blePanelStatus.appendChild(bleStatusClose);
+  const bleStatusText = document.createElement('span');
+  blePanelStatus.appendChild(bleStatusText);
+  document.body.appendChild(blePanelStatus);
+  let lastBleStage = 'Not started';
+  function showBleStatus(message) {
+    bleStatusText.textContent = 'Bluetooth diagnostic: ' + message;
+    blePanelStatus.style.display = 'block';
+  }
+  link.addEventListener('scan-stage', (e) => {
+    lastBleStage = String(e.detail || 'Unknown stage');
+    showBleStatus(lastBleStage);
+  });
+
   /* ---------- connection ---------- */
   let startupDone = false;
   link.addEventListener('state', (e) => {
@@ -989,8 +1013,17 @@
     if (link.state === 'connected' || link.state === 'demo') return link.disconnect();
     if (link.state === 'connecting' && !link.reconnecting) return;   // native: a tap during auto-reconnect starts a fresh connect
     if (!link.supported) { link.startDemo(); return toast('No Web Bluetooth here. Demo mode is on.'); }
-    try { await link.connect(S.showAll); toast('Connected to ' + link.name); }
-    catch (err) { if (err && err.name !== 'NotFoundError') { const m = friendlyError(err); toast(m); noteFail(m); } }
+    showBleStatus('Connect tapped — starting scan');
+    try { await link.connect(S.showAll); showBleStatus('Connected to ' + link.name); toast('Connected to ' + link.name); }
+    catch (err) {
+      // A missing/cancelled native picker must not fail silently on old Android panels.
+      const raw = String((err && err.message) || err || 'Unknown Bluetooth error');
+      const m = err && err.name === 'NotFoundError'
+        ? 'No strip selected. On Android 8.1, enable Location in quick settings, allow Location permission, then try Connect strip again. (' + raw + ')'
+        : friendlyError(err) + ' (' + raw + ')';
+      showBleStatus('Last stage: ' + lastBleStage + '\nError: ' + m);
+      toast(m); noteFail(m);
+    }
   });
 
   /* ---------- tabs ---------- */
@@ -1671,6 +1704,7 @@
   $('#djBank').addEventListener('change', () => { S.djBank = $$('#djBank input:checked').map(e => e.value); save(); });
   renderAll();
   runHash();
+  if (window.MelkPanelDiagnostics) window.MelkPanelDiagnostics.ready();
 
   /* ---------- app (APK) update: leave nothing running while Android's installer is open ---------- */
   MelkApk.init({
