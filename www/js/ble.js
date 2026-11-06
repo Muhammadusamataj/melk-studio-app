@@ -4,7 +4,37 @@
   const P = g.Melk.protocol;
   const RETRY_MS = [800, 1500, 3000, 5000, 8000, 12000];
 
-  class Link extends EventTarget {
+  // Android 8.1 head units can ship Chromium/WebView 61, where EventTarget
+  // is available for DOM nodes but is not constructible with `new EventTarget()`.
+  // An EventTarget superclass then throws during app boot and every button stays dead.
+  // Keep the native EventTarget where supported; use a minimal compatible emitter otherwise.
+  const EventBase = (function () {
+    try { if (typeof EventTarget === 'function') { new EventTarget(); return EventTarget; } }
+    catch (_) { /* Older Android WebView: fall through. */ }
+    return class LegacyEventTarget {
+      constructor() { this._listeners = {}; }
+      addEventListener(type, listener) {
+        if (!listener) return;
+        (this._listeners[type] || (this._listeners[type] = [])).push(listener);
+      }
+      removeEventListener(type, listener) {
+        const list = this._listeners[type];
+        if (!list) return;
+        const index = list.indexOf(listener);
+        if (index !== -1) list.splice(index, 1);
+      }
+      dispatchEvent(event) {
+        if (!event || !event.type) throw new TypeError('Expected an event');
+        (this._listeners[event.type] || []).slice().forEach(listener => {
+          if (typeof listener === 'function') listener.call(this, event);
+          else if (listener && typeof listener.handleEvent === 'function') listener.handleEvent(event);
+        });
+        return !event.defaultPrevented;
+      }
+    };
+  })();
+
+  class Link extends EventBase {
     constructor() {
       super();
       this.state = 'idle'; // idle | connecting | connected | demo
