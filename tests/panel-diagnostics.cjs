@@ -60,3 +60,12 @@ test('errors reported before the body exists become visible on DOMContentLoaded'
   listeners.DOMContentLoaded();
   assert.match(element.textContent, /Old WebView syntax error/);
 });
+
+test('diagnostic APK has a separate package id only when explicitly requested', () => {
+  const gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+  const workflow = fs.readFileSync('.github/workflows/android81-panel.yml', 'utf8');
+  assert.match(gradle, /project\.hasProperty\('melkPanelSideBySide'\)/);
+  assert.match(gradle, /applicationIdSuffix '\.paneldiag'/);
+  assert.match(workflow, /-PmelkPanelSideBySide=true/);
+  assert.match(workflow, /com\.bleled\.com\.paneldiag/);
+});
