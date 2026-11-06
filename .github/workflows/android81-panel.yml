@@ -31,7 +31,7 @@ jobs:
       - run: npm ci && npm test && npm run test:tools
       - run: npx cap sync android
       - name: Build Android 8.1 diagnostic APK
-        run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-daemon
+        run: bash android/gradlew -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PmelkPanelSideBySide=true --no-daemon
       - name: Confirm APK API level and architecture
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
@@ -39,9 +39,10 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)"
           "$AAPT" dump badging "$APK" | tee android81-apk-badging.txt
           grep -q "sdkVersion:'24'" android81-apk-badging.txt
+          grep -q "package: name='com.bleled.com.paneldiag'" android81-apk-badging.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Android81-DIAGNOSTIC-DEBUG-APK-${{ github.run_id }}
+          name: Android81-SIDE-BY-SIDE-DIAGNOSTIC-APK-${{ github.run_id }}
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             android81-apk-badging.txt
