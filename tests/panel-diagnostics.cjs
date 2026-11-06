@@ -87,3 +87,12 @@ test('BLE Link constructs and dispatches events on Android 8.1 WebView with ille
   assert.equal(seen, 1);
   assert.equal(link.state, 'idle');
 });
+
+test('native BLE picker scans all devices and connection errors are visible', () => {
+  const native = fs.readFileSync('www/js/ble-native.js', 'utf8');
+  const app = fs.readFileSync('www/js/app.js', 'utf8');
+  assert.match(native, /await ble\(\)\.requestDevice\(\{\}\)/);
+  assert.doesNotMatch(native, /requestDevice\(showAll \?/);
+  assert.match(app, /No strip selected\. On Android 8\.1/);
+  assert.match(app, /toast\(m\); noteFail\(m\)/);
+});
