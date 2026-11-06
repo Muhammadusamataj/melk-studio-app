@@ -1671,6 +1671,7 @@
   $('#djBank').addEventListener('change', () => { S.djBank = $$('#djBank input:checked').map(e => e.value); save(); });
   renderAll();
   runHash();
+  if (window.MelkPanelDiagnostics) window.MelkPanelDiagnostics.ready();
 
   /* ---------- app (APK) update: leave nothing running while Android's installer is open ---------- */
   MelkApk.init({
